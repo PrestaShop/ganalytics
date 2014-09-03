@@ -34,7 +34,7 @@ class GAnalytics extends Module
 	{
 		$this->name = 'ganalytics';
 		$this->tab = 'analytics_stats';
-		$this->version = '1.8.2';
+		$this->version = '1.8.3';
 		$this->author = 'PrestaShop';
 		$this->displayName = 'Google Analytics';
 		$this->module_key = 'fd2aaefea84ac1bb512e6f1878d990b8';
@@ -67,6 +67,7 @@ class GAnalytics extends Module
 			
 			Configuration::updateValue('GANALYTICS_ID', Tools::getValue('ganalytics_id'));
 			Configuration::updateValue('UGANALYTICS', Tools::getValue('universal_analytics'));
+			Configuration::updateValue('DISPFEATURES', Tools::getValue('display_features'));
 			$output .= '
 			<div class="conf confirm">
 				<img src="../img/admin/ok.gif" alt="" title="" />
@@ -89,6 +90,8 @@ class GAnalytics extends Module
 					<p class="clear">'.$this->l('Example:').' UA-1234567-1</p>
 					<input type="checkbox" name="universal_analytics" '.(Tools::getValue('universal_analytics', Configuration::get('UGANALYTICS')) ? 'checked="checked"' : '').' />
 					<p class="clear">'.$this->l('Universal Analytics Active').'</p>
+					<input type="checkbox" name="display_features" '.(Tools::getValue('display_features', Configuration::get('DISPFEATURES')) ? 'checked="checked"' : '').' />
+					<p class="clear">'.$this->l('Implements Display Advertising features').'</p>
 				</div>
 				<center><input type="submit" name="submitGAnalytics" value="'.$this->l('Update ID').'" class="button" /></center>
 			</fieldset>
@@ -168,6 +171,7 @@ class GAnalytics extends Module
 
 		$this->context->smarty->assign('ganalytics_id', Configuration::get('GANALYTICS_ID'));
 		$this->context->smarty->assign('universal_analytics', Configuration::get('UGANALYTICS'));
+		$this->context->smarty->assign('display_features', Configuration::get('DISPFEATURES'));
 		$this->context->smarty->assign('isOrder', false);
 
 		return $this->display(__FILE__, 'views/templates/hook/header.tpl');
@@ -241,6 +245,7 @@ class GAnalytics extends Module
 			$this->context->smarty->assign('trans', $trans);
 			$this->context->smarty->assign('ganalytics_id', $ganalytics_id);
 			$this->context->smarty->assign('universal_analytics', Configuration::get('UGANALYTICS'));
+			$this->context->smarty->assign('display_features', Configuration::get('DISPFEATURES'));
 			$this->context->smarty->assign('isOrder', true);
 
 			return $this->display(__FILE__, 'views/templates/hook/header.tpl');
