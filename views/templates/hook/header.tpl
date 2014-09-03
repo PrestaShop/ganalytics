@@ -43,6 +43,9 @@
     {if $isOrder eq true}
     ga('require', 'ecommerce', 'ecommerce.js');
     {else}
+    {if $display_features eq true}
+    ga('require', 'displayfeatures');
+	{/if}
     ga('send', 'pageview');
     {/if}
 
@@ -148,7 +151,17 @@
         var ga = document.createElement('script');
         ga.type = 'text/javascript';
         ga.async = true;
-        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        {/literal}
+		{if $display_features eq true}
+		{literal}
+		ga.src = ('https:' == document.location.protocol ? 'https://' : 'http://') + 'stats.g.doubleclick.net/dc.js';
+		{/literal}
+		{else}
+		{literal}
+        	ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+		{/literal}
+		{/if}
+		{literal}
         var s = document.getElementsByTagName('script')[0];
         s.parentNode.insertBefore(ga, s);
     })();
