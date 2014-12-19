@@ -152,17 +152,23 @@ var GoogleAnalyticEnhancedECommerce = {
 	},
 
 	addTransaction: function(Order) {
-
+		var called = false;
 		//this.add(Product);
 		ga('ec:setAction', 'purchase', Order);
 		ga('send', 'pageview', {
 			'hitCallback': function() {
+				called = true;
 				$.get(Order.url, {
 					orderid: Order.orderid
 				});
 			}
 		});
-
+		setTimeout(function() {
+                        if(!called)
+                                $.get(Order.url, {
+                                        orderid: Order.id
+                                });
+                },2000);
 	},
 
 	addCheckout: function(Step) {
