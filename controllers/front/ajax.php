@@ -34,7 +34,7 @@ class GanalyticsAjaxModuleFrontController extends ModuleFrontController
 		parent::initContent();
 
 		$order = new Order((int)Tools::getValue('orderid'));
-		if (Validate::isLoadedObject($order) && ($order->id_customer == $this->context->cookie->id_customer || isset($this->context->cookie->id_employee)))
+		if (Validate::isLoadedObject($order))
 			Db::getInstance()->execute('UPDATE `'._DB_PREFIX_.'ganalytics` SET sent = 1, date_add = NOW() WHERE id_order = '.(int)Tools::getValue('orderid').' LIMIT 1');
 		die;
 	}
