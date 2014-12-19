@@ -195,8 +195,8 @@ class Ganalytics extends Module
 				m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
 				})(window,document,\'script\',\'//www.google-analytics.com/analytics.js\',\'ga\');
 				ga(\'create\', \''.Tools::safeOutput(Configuration::get('GA_ACCOUNT_ID')).'\', \'auto\');
-				'.($back_office ? 'ga(\'require\', \'ecommerce\');' : '').'
 				ga(\'require\', \'ec\');
+				'.($back_office ? 'ga(\'set\', \'nonInteraction\', true);' : '').'
 			</script>';
 	}
 
@@ -541,6 +541,7 @@ class Ganalytics extends Module
 	*/
 	public function hookAdminOrder()
 	{
+		$this->js_state = 1;
 		echo $this->_runJs($this->context->cookie->ga_admin_refund);
 		unset($this->context->cookie->ga_admin_refund);
 	}
@@ -551,25 +552,25 @@ class Ganalytics extends Module
 	public function hookBackOfficeHeader()
 	{
 		$js = '';
-		if (strcmp(Tools::getValue('configure'), $this->name) === 0)
-		{
-			if (version_compare(_PS_VERSION_, '1.5', '>') == true)
-			{
-				$this->context->controller->addCSS($this->_path.'views/css/ganalytics.css');
-				if (version_compare(_PS_VERSION_, '1.6', '<') == true)
-					$this->context->controller->addCSS($this->_path.'views/css/ganalytics-nobootstrap.css');
-			}
-			else
-			{
-				$js .= '<link rel="stylesheet" href="'.$this->_path.'views/css/ganalytics.css" type="text/css" />'.
-					'<link rel="stylesheet" href="'.$this->_path.'views/css/ganalytics-nobootstrap.css" type="text/css" />';
-			}
-		}
-
 		$ga_account_id = Configuration::get('GA_ACCOUNT_ID');
 
 		if (!empty($ga_account_id))
 		{
+			if (strcmp(Tools::getValue('configure'), $this->name) === 0)
+			{
+				if (version_compare(_PS_VERSION_, '1.5', '>') == true)
+				{
+					$this->context->controller->addCSS($this->_path.'views/css/ganalytics.css');
+					if (version_compare(_PS_VERSION_, '1.6', '<') == true)
+						$this->context->controller->addCSS($this->_path.'views/css/ganalytics-nobootstrap.css');
+				}
+				else
+				{
+					$js .= '<link rel="stylesheet" href="'.$this->_path.'views/css/ganalytics.css" type="text/css" />'.
+						'<link rel="stylesheet" href="'.$this->_path.'views/css/ganalytics-nobootstrap.css" type="text/css" />';
+				}
+			}
+
 			if (version_compare(_PS_VERSION_, '1.5', '>=') == true)
 				$this->context->controller->addJs($this->_path.'views/js/GoogleAnalyticActionLib.js');
 			else
@@ -591,6 +592,7 @@ class Ganalytics extends Module
 					}
 				}
 
+			$this->js_state = 1;
 			return $js.$this->_getGoogleAnalyticsTag(true).$this->_runJs($ga_scripts);
 		}
 		else return $js;
