@@ -165,9 +165,12 @@ var GoogleAnalyticEnhancedECommerce = {
 		});
 		setTimeout(function() {
                         if(!called)
+                        {
+                        	called = true;	
                                 $.get(Order.url, {
                                         orderid: Order.id
                                 });
+                        }
                 },2000);
 	},
 
