@@ -541,7 +541,6 @@ class Ganalytics extends Module
 	*/
 	public function hookAdminOrder()
 	{
-		$this->js_state = 1;
 		echo $this->_runJs($this->context->cookie->ga_admin_refund);
 		unset($this->context->cookie->ga_admin_refund);
 	}
@@ -592,7 +591,6 @@ class Ganalytics extends Module
 					}
 				}
 
-			$this->js_state = 1;
 			return $js.$this->_getGoogleAnalyticsTag(true).$this->_runJs($ga_scripts);
 		}
 		else return $js;
