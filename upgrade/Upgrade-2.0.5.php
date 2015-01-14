@@ -27,6 +27,7 @@ if (!defined('_PS_VERSION_'))
 	exit;
 function upgrade_module_2_0_5($object)
 {
+	Configuration::updateValue('GANALYTICS', '2.0.5');
 	return (Db::getInstance()->execute('
 		CREATE TABLE IF NOT EXISTS `'._DB_PREFIX_.'ganalytics` (
 			`id_google_analytics` int(11) NOT NULL AUTO_INCREMENT,
