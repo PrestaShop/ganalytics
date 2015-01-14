@@ -157,7 +157,7 @@ var GoogleAnalyticEnhancedECommerce = {
 
 		//this.add(Product);
 		ga('ec:setAction', 'purchase', Order);
-		ga('send', 'pageview', {
+		ga('send', 'event','Transaction','purchase', {
 			'hitCallback': function() {
 				$.get(Order.url, {
 					orderid: Order.id
