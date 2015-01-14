@@ -551,25 +551,25 @@ class Ganalytics extends Module
 	public function hookBackOfficeHeader()
 	{
 		$js = '';
+		if (strcmp(Tools::getValue('configure'), $this->name) === 0)
+		{
+			if (version_compare(_PS_VERSION_, '1.5', '>') == true)
+			{
+				$this->context->controller->addCSS($this->_path.'views/css/ganalytics.css');
+				if (version_compare(_PS_VERSION_, '1.6', '<') == true)
+					$this->context->controller->addCSS($this->_path.'views/css/ganalytics-nobootstrap.css');
+			}
+			else
+			{
+				$js .= '<link rel="stylesheet" href="'.$this->_path.'views/css/ganalytics.css" type="text/css" />'.
+					'<link rel="stylesheet" href="'.$this->_path.'views/css/ganalytics-nobootstrap.css" type="text/css" />';
+			}
+		}
+
 		$ga_account_id = Configuration::get('GA_ACCOUNT_ID');
 
 		if (!empty($ga_account_id))
 		{
-			if (strcmp(Tools::getValue('configure'), $this->name) === 0)
-			{
-				if (version_compare(_PS_VERSION_, '1.5', '>') == true)
-				{
-					$this->context->controller->addCSS($this->_path.'views/css/ganalytics.css');
-					if (version_compare(_PS_VERSION_, '1.6', '<') == true)
-						$this->context->controller->addCSS($this->_path.'views/css/ganalytics-nobootstrap.css');
-				}
-				else
-				{
-					$js .= '<link rel="stylesheet" href="'.$this->_path.'views/css/ganalytics.css" type="text/css" />'.
-						'<link rel="stylesheet" href="'.$this->_path.'views/css/ganalytics-nobootstrap.css" type="text/css" />';
-				}
-			}
-
 			if (version_compare(_PS_VERSION_, '1.5', '>=') == true)
 				$this->context->controller->addJs($this->_path.'views/js/GoogleAnalyticActionLib.js');
 			else
