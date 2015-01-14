@@ -37,7 +37,7 @@ class Ganalytics extends Module
 	{
 		$this->name = 'ganalytics';
 		$this->tab = 'analytics_stats';
-		$this->version = '2.0.5';
+		$this->version = '2.0.4';
 		$this->author = 'PrestaShop';
 		$this->module_key = 'fd2aaefea84ac1bb512e6f1878d990b8';
 		$this->bootstrap = true;
@@ -195,8 +195,8 @@ class Ganalytics extends Module
 				m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
 				})(window,document,\'script\',\'//www.google-analytics.com/analytics.js\',\'ga\');
 				ga(\'create\', \''.Tools::safeOutput(Configuration::get('GA_ACCOUNT_ID')).'\', \'auto\');
-				'.($back_office ? 'ga(\'require\', \'ecommerce\');' : '').'
 				ga(\'require\', \'ec\');
+				'.($back_office ? 'ga(\'set\', \'nonInteraction\', true);' : '').'
 			</script>';
 	}
 
@@ -291,10 +291,7 @@ class Ganalytics extends Module
 
 		$confirmation_hook_id = Hook::getIdByName('orderConfirmation');
 		if (isset(Hook::$executed_hooks[$confirmation_hook_id]))
-		{
-			$this->js_state = 1;
 			$this->eligible = 1;
-		}
 
 		if (isset($products) && count($products) && $controller_name != 'index')
 		{
@@ -413,7 +410,7 @@ class Ganalytics extends Module
 
 			$ga_product = array(
 				'id' => (isset($product['reference']) && !empty($product['reference'])) ? $product['reference'] : $product['id_product'],
-				'name' => urlencode($product['name']),
+				'name' => $product['name'],
 				'category' => $product['category'],
 				'brand' => isset($product['manufacturer_name']) ? $product['manufacturer_name'] : '',
 				'variant' => $variant,
@@ -678,7 +675,7 @@ class Ganalytics extends Module
 	{
 		// Used by PrestaShop 1.3 & 1.4
 		if (version_compare(_PS_VERSION_, '1.5', '<') && self::isInstalled($this->name))
-			foreach (array('2.0.0', '2.0.4', '2.0.5') as $version)
+			foreach (array('2.0.0', '2.0.4') as $version)
 			{
 				$file = dirname(__FILE__).'/upgrade/Upgrade-'.$version.'.php';
 				if (Configuration::get('GANALYTICS') < $version && file_exists($file))
