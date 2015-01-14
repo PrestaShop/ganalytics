@@ -37,7 +37,7 @@ class Ganalytics extends Module
 	{
 		$this->name = 'ganalytics';
 		$this->tab = 'analytics_stats';
-		$this->version = '2.0.4';
+		$this->version = '2.0.5';
 		$this->author = 'PrestaShop';
 		$this->module_key = 'fd2aaefea84ac1bb512e6f1878d990b8';
 		$this->bootstrap = true;
@@ -61,7 +61,7 @@ class Ganalytics extends Module
 
 		if (!parent::install() || !$this->registerHook('header') || !$this->registerHook('adminOrder')
 			|| !$this->registerHook('footer') || !$this->registerHook('home')
-			|| !$this->registerHook('productfooter') || !$this->registerHook('top')
+			|| !$this->registerHook('productfooter') || !$this->registerHook('orderConfirmation')
 			|| !$this->registerHook('backOfficeHeader'))
 			return false;
 
@@ -219,9 +219,9 @@ class Ganalytics extends Module
 
 		if (Validate::isLoadedObject($order))
 			return array(
-				'orderid' => $id_order,
-				'storename' => $this->context->shop->name,
-				'grandtotal' => $order->total_paid,
+				'id' => $id_order,
+				'affiliation' => $this->context->shop->name,
+				'revenue' => $order->total_paid,
 				'shipping' => $order->total_shipping,
 				'tax' => $order->total_paid_tax_incl,
 				'url' => $this->context->link->getModuleLink('ganalytics', 'ajax', array(), true));
@@ -230,28 +230,24 @@ class Ganalytics extends Module
 	/**
 	* To track transactions
 	*/
-	public function hookTop()
+	public function hookOrderConfirmation($params)
 	{
-		// Add Google Analytics order - Only on Order's confirmation page
-		$controller_name = Tools::getValue('controller');
-		if ($controller_name == 'orderconfirmation')
+		$order = $params['objOrder'];
+		if (Validate::isLoadedObject($order))
 		{
-			$ga_order_sent = Db::getInstance()->getValue('SELECT sent FROM `'._DB_PREFIX_.'ganalytics` WHERE id_order = '.(int)$this->context->controller->id_order);
+			$ga_order_sent = Db::getInstance()->getValue('SELECT sent FROM `'._DB_PREFIX_.'ganalytics` WHERE id_order = '.(int)$order->id);
 			if ($ga_order_sent === false)
 			{
-				$order = new Order($this->context->controller->id_order);
-				if (!Validate::isLoadedObject($order))
-					return;
-
 				$order_products = array();
-				foreach ($order->getProducts() as $order_product)
-					$order_products[] = $this->wrapProduct((int)$order_product['product_id'], array('qty' => $order_product['product_quantity']), 0, true);
+                                $cart = new Cart($order->id_cart);
+				foreach ($cart->getProducts() as $order_product)
+					$order_products[] = $this->wrapProduct($order_product, array(), 0, true);
 
-				Db::getInstance()->Execute('INSERT INTO `'._DB_PREFIX_.'ganalytics` (id_order, sent, date_add) VALUES ('.(int)$this->context->controller->id_order.', 0, NOW())');
+				Db::getInstance()->Execute('INSERT INTO `'._DB_PREFIX_.'ganalytics` (id_order, sent, date_add) VALUES ('.(int)$order->id.', 0, NOW())');
 				$ga_order_sent = 0;
 
 				$transaction = array(
-					'orderid' => $order->reference,
+					'id' => $order->id,
 					'affiliation' => $this->context->shop->name,
 					'revenue' => $order->total_paid,
 					'shipping' => $order->total_shipping,
@@ -259,6 +255,7 @@ class Ganalytics extends Module
 					'url' => $this->context->link->getModuleLink('ganalytics', 'ajax', array(), true));
 				$ga_scripts = $this->addTransaction($order_products, $transaction);
 
+				$this->js_state = 1;
 				return $this->_runJs($ga_scripts);
 			}
 		}
@@ -270,6 +267,7 @@ class Ganalytics extends Module
 	public function hookFooter()
 	{
 		$ga_scripts = '';
+		$this->js_state = 0;
 
 		if (isset($this->context->cookie->ga_cart))
 		{
@@ -279,6 +277,7 @@ class Ganalytics extends Module
 		}
 
 		$controller_name = Tools::getValue('controller');
+		$products = $this->wrapProducts($this->context->smarty->getTemplateVars('products'), array(), true);
 
 		if ($controller_name == 'order' || $controller_name == 'orderopc')
 		{
@@ -286,15 +285,18 @@ class Ganalytics extends Module
 			$step = Tools::getValue('step');
 			if (empty($step))
 				$step = 0;
-			$products = $this->wrapProducts($this->context->smarty->getTemplateVars('products'), array(), true);
 			$ga_scripts .= $this->addProductFromCheckout($products, $step);
 			$ga_scripts .= 'MBG.addCheckout(\''.(int)$step.'\');';
 		}
 
-		if ($controller_name == 'orderconfirmation')
+		$confirmation_hook_id = Hook::getIdByName('orderConfirmation');
+		if (isset(Hook::$executed_hooks[$confirmation_hook_id]))
+		{
+			$this->js_state = 1;
 			$this->eligible = 1;
+		}
 
-		if (isset($products) && count($products))
+		if (isset($products) && count($products) && $controller_name != 'index')
 		{
 			if ($this->eligible == 0)
 				$ga_scripts .= $this->addProductImpression($products);
@@ -343,6 +345,7 @@ class Ganalytics extends Module
 			$ga_scripts .= $this->addProductImpression($ga_homebestsell_product_list).$this->addProductClick($ga_homebestsell_product_list);
 		}
 
+		$this->js_state = 1;
 		return $this->_runJs($this->filter($ga_scripts));
 	}
 
@@ -409,8 +412,8 @@ class Ganalytics extends Module
 				$product_type = 'virtual';
 
 			$ga_product = array(
-				'id' => isset($product['reference']) ? $product['reference'] : $product['id_product'],
-				'name' => $product['name'],
+				'id' => (isset($product['reference']) && !empty($product['reference'])) ? $product['reference'] : $product['id_product'],
+				'name' => urlencode($product['name']),
 				'category' => $product['category'],
 				'brand' => isset($product['manufacturer_name']) ? $product['manufacturer_name'] : '',
 				'variant' => $variant,
@@ -510,6 +513,7 @@ class Ganalytics extends Module
 			if (isset($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERER'], $_SERVER['HTTP_HOST']) > 0)
 				$js .= $this->addProductClickByHttpReferal(array($ga_product));
 
+			$this->js_state = 1;
 			return $this->_runJs($js);
 		}
 	}
@@ -525,14 +529,15 @@ class Ganalytics extends Module
 			if ($this->js_state != 1 && !defined('_PS_ADMIN_DIR_'))
 				$js_code .= 'ga(\'send\', \'pageview\');';
 
-			return '
-			<script type="text/javascript">
-				jQuery(document).ready(function(){
-					var MBG = GoogleAnalyticEnhancedECommerce;
-					MBG.setCurrency(\''.Tools::safeOutput($this->context->currency->iso_code).'\');
-					'.$js_code.'
-				});
-			</script>';
+			if (!empty($js_code))
+				return '
+				<script type="text/javascript">
+					jQuery(document).ready(function(){
+						var MBG = GoogleAnalyticEnhancedECommerce;
+						MBG.setCurrency(\''.Tools::safeOutput($this->context->currency->iso_code).'\');
+						'.$js_code.'
+					});
+				</script>';
 		}
 	}
 
@@ -607,9 +612,9 @@ class Ganalytics extends Module
 		{
 			// Display GA refund product
 			$order_detail = new OrderDetail($orderdetail_id);
-			$ga_scripts .= 'MBG.add('.Tools::jsonEncode(array('id' => $order_detail->product_reference, 'quantity' => $qty)).');';
+			$ga_scripts .= 'MBG.add('.Tools::jsonEncode(array('id' => empty($order_detail->product_reference)?$order_detail->product_id:$order_detail->product_reference, 'quantity' => $qty)).');';
 		}
-		$this->context->cookie->ga_admin_refund = $ga_scripts.'MBG.refundByProduct('.Tools::jsonEncode(array('id' => $params['order']->reference)).');';
+		$this->context->cookie->ga_admin_refund = $ga_scripts.'MBG.refundByProduct('.Tools::jsonEncode(array('id' => $params['order']->id)).');';
 	}
 
 	/**
@@ -673,7 +678,7 @@ class Ganalytics extends Module
 	{
 		// Used by PrestaShop 1.3 & 1.4
 		if (version_compare(_PS_VERSION_, '1.5', '<') && self::isInstalled($this->name))
-			foreach (array('2.0.0', '2.0.4') as $version)
+			foreach (array('2.0.0', '2.0.4', '2.0.5') as $version)
 			{
 				$file = dirname(__FILE__).'/upgrade/Upgrade-'.$version.'.php';
 				if (Configuration::get('GANALYTICS') < $version && file_exists($file))
