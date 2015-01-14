@@ -23,21 +23,11 @@
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
-
-class GanalyticsAjaxModuleFrontController extends ModuleFrontController
+if (!defined('_PS_VERSION_'))
+	exit;
+function upgrade_module_2_0_5($object)
 {
-	public $ssl = true;
-	/*
-	 * @see FrontController::initContent()
-	 */
-	public function initContent()
-	{
-		parent::initContent();
-
-		$order = new Order((int)Tools::getValue('orderid'));
-		if (!Validate::isLoadedObject($order) || $order->id_customer != $this->context->cookie->id_customer)
-			die;
-		Db::getInstance()->execute('UPDATE `'._DB_PREFIX_.'ganalytics` SET sent = 1, date_add = NOW() WHERE id_order = '.(int)Tools::getValue('orderid').' LIMIT 1');
-		die;
-	}
+	Configuration::updateValue('GANALYTICS', '2.0.5');
+	return ($object->registerHook('orderConfirmation')
+		&& $object->unregisterHook('top'));
 }
