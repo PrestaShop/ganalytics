@@ -416,7 +416,7 @@ class Ganalytics extends Module
 				'name' => urlencode($product['name']),
 				'category' => $product['category'],
 				'brand' => isset($product['manufacturer_name']) ? $product['manufacturer_name'] : '',
-				'variant' => $variant,
+				'variant' => urlencode($variant),
 				'type' => $product_type,
 				'position' => $index ? $index : '0',
 				'quantity' => $product_qty,
