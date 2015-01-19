@@ -62,7 +62,7 @@ class Ganalytics extends Module
 		if (!parent::install() || !$this->installTab() || !$this->registerHook('header') || !$this->registerHook('adminOrder')
 			|| !$this->registerHook('footer') || !$this->registerHook('home')
 			|| !$this->registerHook('productfooter') || !$this->registerHook('orderConfirmation')
-			|| !$this->registerHook('backOfficeHeader'))
+			|| !$this->registerHook('backOfficeHeader') || !$this->registerHook('processCarrier'))
 			return false;
 
 		if (version_compare(_PS_VERSION_, '1.5', '>=')
@@ -278,6 +278,8 @@ class Ganalytics extends Module
 				Db::getInstance()->Execute('INSERT INTO `'._DB_PREFIX_.'ganalytics` (id_order, sent, date_add) VALUES ('.(int)$order->id.', 0, NOW())');
 				$ga_order_sent = 0;
 
+				$ga_scripts = 'MBG.addCheckoutOption(3,\''.$order->payment.'\');';
+
 				$transaction = array(
 					'id' => $order->id,
 					'affiliation' => $this->context->shop->name,
@@ -285,7 +287,7 @@ class Ganalytics extends Module
 					'shipping' => $order->total_shipping,
 					'tax' => $order->total_paid_tax_incl - $order->total_paid_tax_excl,
 					'url' => $this->context->link->getModuleLink('ganalytics', 'ajax', array(), true));
-				$ga_scripts = $this->addTransaction($order_products, $transaction);
+				$ga_scripts .= $this->addTransaction($order_products, $transaction);
 
 				$this->js_state = 1;
 				return $this->_runJs($ga_scripts);
@@ -718,6 +720,13 @@ class Ganalytics extends Module
 			$this->context->cookie->ga_cart .= $ga_scripts;
 		}
 	}
+	
+        public function hookProcessCarrier($params){
+            if(isset($params['cart']->id_carrier)){
+                $carrier_name = Db::getInstance()->getValue('SELECT name FROM `'._DB_PREFIX_.'carrier` WHERE id_carrier = '.(int)$params['cart']->id_carrier);
+                $this->context->cookie->ga_cart .= 'MBG.addCheckoutOption(2,\''.$carrier_name.'\');';
+            }
+        }
 
 	private function checkForUpdates()
 	{
