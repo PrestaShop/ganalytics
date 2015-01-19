@@ -33,5 +33,5 @@ function upgrade_module_2_0_6($object)
 	if (version_compare(_PS_VERSION_, '1.5', '<'))
 		return true;
 
-	return $object->installTab();
+	return ($object->installTab() && $object->registerHook('processCarrier'));
 }
