@@ -626,7 +626,7 @@ class Ganalytics extends Module
 			if ($ga_order_records)
 				foreach ($ga_order_records as $row)
 				{
-					$order = new Order((int)$id_order);
+					$order = new Order((int)$row['id_order']);
 					$transaction = $this->wrapOrder($order);
 					if (!empty($transaction))
 					{
