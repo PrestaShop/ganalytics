@@ -245,17 +245,15 @@ class Ganalytics extends Module
 	/**
 	* Return a detailed transaction for Google Analytics
 	*/
-	public function wrapOrder($id_order)
+	public function wrapOrder($order)
 	{
-		$order = new Order((int)$id_order);
-
 		if (Validate::isLoadedObject($order))
 			return array(
-				'id' => $id_order,
+				'id' => $order->id,
 				'affiliation' => $this->context->shop->name,
 				'revenue' => $order->total_paid,
 				'shipping' => $order->total_shipping,
-				'tax' => $order->total_paid_tax_incl,
+				'tax' => $order->total_paid_tax_incl  - $order->total_paid_tax_excl,
 				'url' => $this->context->link->getAdminLink('AdminGanalyticsAjax'));
 	}
 
@@ -278,14 +276,9 @@ class Ganalytics extends Module
 				Db::getInstance()->Execute('INSERT INTO `'._DB_PREFIX_.'ganalytics` (id_order, sent, date_add) VALUES ('.(int)$order->id.', 0, NOW())');
 				$ga_order_sent = 0;
 
-				$transaction = array(
-					'id' => $order->id,
-					'affiliation' => $this->context->shop->name,
-					'revenue' => $order->total_paid,
-					'shipping' => $order->total_shipping,
-					'tax' => $order->total_paid_tax_incl - $order->total_paid_tax_excl,
-					'url' => $this->context->link->getModuleLink('ganalytics', 'ajax', array(), true));
-				$ga_scripts = $this->addTransaction($order_products, $transaction);
+				$transaction = $this->wrapOrder($order);
+				if (!empty($transaction))
+					$ga_scripts = $this->addTransaction($order_products, $transaction);
 
 				$this->js_state = 1;
 				return $this->_runJs($ga_scripts);
@@ -633,7 +626,8 @@ class Ganalytics extends Module
 			if ($ga_order_records)
 				foreach ($ga_order_records as $row)
 				{
-					$transaction = $this->wrapOrder($row['id_order']);
+					$order = new Order((int)$row['id_order']);
+					$transaction = $this->wrapOrder($order);
 					if (!empty($transaction))
 					{
 						$transaction = Tools::jsonEncode($transaction);
