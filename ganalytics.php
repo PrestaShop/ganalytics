@@ -505,7 +505,7 @@ class Ganalytics extends Module
 
 		$js = '';
 
-                if(isset($_COOKIE['_ga']) && function_exists('curl_version'))
+                if (isset($_COOKIE['_ga']) && function_exists('curl_version'))
                 {
                     $order_map = array(
                         'affiliation' => 'ta',
@@ -528,26 +528,26 @@ class Ganalytics extends Module
                     $cookie_ga = explode('.',$_COOKIE['_ga']);
                     $client_id = $cookie_ga[2].'.'.$cookie_ga[3];
                     $params = array(
-                        'v'=>1,
-                        'tid'=>Configuration::get('GA_ACCOUNT_ID'),
-                        'cid'=>$client_id,
-                        't'=>'event',
-                        'ec'=>'Transaction',
-                        'ea'=>'purchase',
-                        'cu'=>$this->context->currency->iso_code
-                        );
+                        'v' => 1,
+                        'tid' => Configuration::get('GA_ACCOUNT_ID'),
+                        'cid' => $client_id,
+                        't' => 'event',
+                        'ec' => 'Transaction',
+                        'ea' => 'purchase',
+                        'cu' => $this->context->currency->iso_code
+                    );
                     
                     $i = 1;
                     foreach ($products as $product)
                     {
-                        foreach($product as $k=>$v)
-                            if(isset($product_map[$k]))
-                                $params['pr'.$i.$product_map[$k]]=$v;
+                        foreach ($product as $k=>$v)
+                            if (isset($product_map[$k]))
+                                $params['pr'.$i.$product_map[$k]] = $v;
                         $i++;
                     }
-                    foreach($order as $k=>$v)
-                        if(isset($order_map[$k]))
-                            $params[$order_map[$k]]=$v;
+                    foreach ($order as $k=>$v)
+                        if (isset($order_map[$k]))
+                            $params[$order_map[$k]] = $v;
 
                     $content = utf8_encode(http_build_query($params));
                     $ch = curl_init();
