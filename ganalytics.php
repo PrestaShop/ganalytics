@@ -505,7 +505,7 @@ class Ganalytics extends Module
 
 		$js = '';
 
-                if($_COOKIE['_ga'])
+                if(isset($_COOKIE['_ga']) && function_exists('curl_version'))
                 {
                     $order_map = array(
                         'affiliation' => 'ta',
