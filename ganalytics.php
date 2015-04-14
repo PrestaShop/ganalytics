@@ -554,6 +554,7 @@ class Ganalytics extends Module
                     curl_setopt($ch, CURLOPT_URL, 'http://www.google-analytics.com/collect');
                     curl_setopt($ch,CURLOPT_HTTPHEADER,array('Content-type: application/x-www-form-urlencoded'));
                     curl_setopt($ch,CURLOPT_HTTP_VERSION,CURL_HTTP_VERSION_1_1);
+                    curl_setopt($ch,CURLOPT_RETURNTRANSFER, TRUE);
                     curl_setopt($ch,CURLOPT_POST, TRUE);
                     curl_setopt($ch,CURLOPT_POSTFIELDS, $content);
                     curl_exec($ch);
