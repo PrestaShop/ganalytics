@@ -493,8 +493,9 @@ class Ganalytics extends Module
 				'url' => isset($product['link']) ? $product['link'] : '',
 				'price' => number_format($product['price'], '2')
 			);
-
-			$ga_product = array_map(array($this, 'escapeJs'), $ga_product);
+			$ga_product = function_exists('json_encode')
+					? json_encode($ga_product)
+					: array_map(array($this, 'escapeJs'), $ga_product);
 		}
 
 		return $ga_product;
