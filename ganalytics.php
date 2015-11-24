@@ -645,6 +645,25 @@ class Ganalytics extends Module
 	{
 		if (Configuration::get('GA_ACCOUNT_ID'))
 		{
+
+			// Get page name
+			if (!($file = basename(Tools::getValue('controller'))))
+				$file = str_replace(array('.php', '-'), '', basename($_SERVER['SCRIPT_NAME']));
+			if ((method_exists('Language', 'isMultiLanguageActivated') && Language::isMultiLanguageActivated())
+				|| Language::countActiveLanguages() > 1
+			)
+				$multilang = (string)Tools::getValue('isolang').'/';
+			else
+				$multilang = '';
+
+			// Rename the order steps (like : order/step0.html)
+			$default_meta_order = Meta::getMetaByPage('order', $this->context->language->id);
+			if (strpos($_SERVER['REQUEST_URI'], __PS_BASE_URI__.'order.php') === 0 || strpos($_SERVER['REQUEST_URI'], __PS_BASE_URI__.$multilang.$default_meta_order['url_rewrite']) === 0) {
+				$pageTrack = '/order/step'.(int)Tools::getValue('step').'.html';
+			} else {
+				$pageTrack = $file.'.php';
+			}
+
 			$runjs_code = '';
 			if (!empty($js_code))
 				$runjs_code .= '
@@ -659,7 +678,7 @@ class Ganalytics extends Module
 			if (($this->js_state) != 1 && ($backoffice == 0))
 				$runjs_code .= '
 				<script type="text/javascript">
-					ga(\'send\', \'pageview\');
+					ga(\'send\', \'pageview\', {\'page\' : \''.$pageTrack.'\'});
 				</script>';
 
 			return $runjs_code;
