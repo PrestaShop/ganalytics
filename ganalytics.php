@@ -197,6 +197,24 @@ class Ganalytics extends Module
 						),
 					),
 				),
+				array(
+					'type' => 'radio',
+					'label' => $this->l('Enable AnonymizeIp'),
+					'name' => 'GA_ANONYMIZEIP_ENABLED',
+					'hint' => $this->l('If enabled, prevents Google from saving the full IP address for a visitor.'),
+					'values'    => array(
+						array(
+							'id' => 'ga_anonymizeip_enabled',
+							'value' => 1,
+							'label' => $this->l('Enabled')
+						),
+						array(
+							'id' => 'ga_anonymizeip_disabled',
+							'value' => 0,
+							'label' => $this->l('Disabled')
+						),
+					),
+				),
 			),
 			'submit' => array(
 				'title' => $this->l('Save'),
@@ -206,6 +224,7 @@ class Ganalytics extends Module
 		// Load current value
 		$helper->fields_value['GA_ACCOUNT_ID'] = Configuration::get('GA_ACCOUNT_ID');
 		$helper->fields_value['GA_USERID_ENABLED'] = Configuration::get('GA_USERID_ENABLED');
+		$helper->fields_value['GA_ANONYMIZEIP_ENABLED'] = Configuration::get('GA_ANONYMIZEIP_ENABLED');
 
 		return $helper->generateForm($fields_form);
 	}
@@ -231,6 +250,12 @@ class Ganalytics extends Module
 				Configuration::updateValue('GA_USERID_ENABLED', (bool)$ga_userid_enabled);
 				$output .= $this->displayConfirmation($this->l('Settings for User ID updated successfully'));
 			}
+			$ga_anonymizeip_enabled = Tools::getValue('GA_ANONYMIZEIP_ENABLED');
+			if (null !== $ga_anonymizeip_enabled)
+			{
+				Configuration::updateValue('GA_ANONYMIZEIP_ENABLED', (bool)$ga_anonymizeip_enabled);
+				$output .= $this->displayConfirmation($this->l('Settings for AnonymizeIp updated successfully'));
+			}
 		}
 
 		if (version_compare(_PS_VERSION_, '1.5', '>='))
@@ -249,10 +274,15 @@ class Ganalytics extends Module
 	protected function _getGoogleAnalyticsTag($back_office = false)
 	{
 		$user_id = null;
+		$anonymizeip = false;
 		if (Configuration::get('GA_USERID_ENABLED') &&
 			$this->context->customer && $this->context->customer->isLogged()
 		){
 			$user_id = (int)$this->context->customer->id;
+		}
+
+		if (Configuration::get('GA_ANONYMIZEIP_ENABLED')) {
+			$anonymizeip = true;
 		}
 
 		return '
@@ -266,6 +296,7 @@ class Ganalytics extends Module
 				ga(\'require\', \'ec\');'
 				.(($user_id && !$back_office) ? 'ga(\'set\', \'&uid\', \''.$user_id.'\');': '')
 				.($back_office ? 'ga(\'set\', \'nonInteraction\', true);' : '')
+				.($anonymizeip ? 'ga(\'set\', \'anonymizeIp\', true);' : '')
 			.'</script>';
 	}
 
