@@ -646,6 +646,10 @@ class Ganalytics extends Module
 		if (Configuration::get('GA_ACCOUNT_ID'))
 		{
 			$runjs_code = '';
+                        if($backoffice){
+                            $runjs_code .= 'MBG.setCampaign(\'backoffice-orders\',\'backoffice\',\'cms\');';
+                        }
+               
 			if (!empty($js_code))
 				$runjs_code .= '
 				<script type="text/javascript">
