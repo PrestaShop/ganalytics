@@ -327,7 +327,8 @@ class Ganalytics extends Module
 						'url' => $this->context->link->getModuleLink('ganalytics', 'ajax', array(), true),
 						'customer' => $order->id_customer);
 					$ga_scripts .= $this->addTransaction($order_products, $transaction);
-
+					$ga_scripts .= 'MBG.addCheckoutOption(6,\'Confirmation\');';
+					
 					$this->js_state = 1;
 					return $this->_runJs($ga_scripts);
 				}
