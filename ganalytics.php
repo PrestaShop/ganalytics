@@ -730,7 +730,7 @@ class Ganalytics extends Module
 					if ($ga_order_records)
 						foreach ($ga_order_records as $row)
 						{
-							$ga_scripts .=  $this->wrapOrder($row['id_order',true]);
+							$ga_scripts .=  $this->wrapOrder($row['id_order'],true);
 						}
 
 				}
