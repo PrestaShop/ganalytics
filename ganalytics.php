@@ -647,7 +647,7 @@ class Ganalytics extends Module
 		{
 			$runjs_code = '';
                         if($backoffice){
-                            $runjs_code .= 'MBG.setCampaign(\'backoffice-orders\',\'backoffice\',\'cms\');';
+                            $js_code .= 'MBG.setCampaign(\'backoffice-orders\',\'backoffice\',\'cms\');';
                         }
                
 			if (!empty($js_code))
