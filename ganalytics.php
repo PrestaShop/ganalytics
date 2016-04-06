@@ -306,7 +306,7 @@ class Ganalytics extends Module
                     'customer' => $order->id_customer);
 
                 if($backoffice){
-                    Db::getInstance()->execute('UPDATE `'._DB_PREFIX_.'ganalytics` SET date_add = NOW(), sent = 1 WHERE id_order = '.(int)$order->id.' AND id_shop = \''.(int)$this->context->shop->id.'\'');
+                    Db::getInstance()->execute('UPDATE `'._DB_PREFIX_.'ganalytics` SET date_add = NOW(), sent = 1 WHERE id_order = '.(int)$order['id'].' AND id_shop = \''.(int)$this->context->shop->id.'\'');
                 }
 
                 $js = $this->addTransaction($order_products, $order);
