@@ -649,11 +649,9 @@ class Ganalytics extends Module
 			if (!empty($js_code))
 				$runjs_code .= '
 				<script type="text/javascript">
-					jQuery(document).ready(function(){
-						var MBG = GoogleAnalyticEnhancedECommerce;
-						MBG.setCurrency(\''.Tools::safeOutput($this->context->currency->iso_code).'\');
-						'.$js_code.'
-					});
+					var MBG = GoogleAnalyticEnhancedECommerce;
+					MBG.setCurrency(\''.Tools::safeOutput($this->context->currency->iso_code).'\');
+					'.$js_code.'
 				</script>';
 
 			if (($this->js_state) != 1 && ($backoffice == 0))
