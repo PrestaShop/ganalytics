@@ -64,7 +64,7 @@ class Ganalytics extends Module
 		if (!parent::install() || !$this->installTab() || !$this->registerHook('header') || !$this->registerHook('adminOrder')
 			|| !$this->registerHook('footer') || !$this->registerHook('home')
 			|| !$this->registerHook('productfooter') || !$this->registerHook('orderConfirmation')
-			|| !$this->registerHook('backOfficeHeader'))
+			|| !$this->registerHook('backOfficeHeader') || !$this->registerHook('processCarrier'))
 			return false;
 
 		if (version_compare(_PS_VERSION_, '1.5', '>=')
@@ -316,6 +316,8 @@ class Ganalytics extends Module
 					foreach ($cart->getProducts() as $order_product)
 						$order_products[] = $this->wrapProduct($order_product, array(), 0, true);
 
+					$ga_scripts = 'MBG.addCheckoutOption(3,\''.$order->payment.'\');';
+
 					$transaction = array(
 						'id' => $order->id,
 						'affiliation' => (version_compare(_PS_VERSION_, '1.5', '>=') && Shop::isFeatureActive()) ? $this->context->shop->name : Configuration::get('PS_SHOP_NAME'),
@@ -324,7 +326,7 @@ class Ganalytics extends Module
 						'tax' => $order->total_paid_tax_incl - $order->total_paid_tax_excl,
 						'url' => $this->context->link->getModuleLink('ganalytics', 'ajax', array(), true),
 						'customer' => $order->id_customer);
-					$ga_scripts = $this->addTransaction($order_products, $transaction);
+					$ga_scripts .= $this->addTransaction($order_products, $transaction);
 
 					$this->js_state = 1;
 					return $this->_runJs($ga_scripts);
@@ -364,6 +366,7 @@ class Ganalytics extends Module
 
 		if ($controller_name == 'order' || $controller_name == 'orderopc')
 		{
+			$this->js_state = 1;
 			$this->eligible = 1;
 			$step = Tools::getValue('step');
 			if (empty($step))
@@ -527,10 +530,10 @@ class Ganalytics extends Module
 		{
 			$ga_product = array(
 				'id' => $product_id,
-				'name' => Tools::jsonEncode($product['name']),
-				'category' => Tools::jsonEncode($product['category']),
-				'brand' => isset($product['manufacturer_name']) ? Tools::jsonEncode($product['manufacturer_name']) : '',
-				'variant' => Tools::jsonEncode($variant),
+				'name' => Tools::str2url($product['name']),
+				'category' => Tools::str2url($product['category']),
+				'brand' => isset($product['manufacturer_name']) ? Tools::str2url($product['manufacturer_name']) : '',
+				'variant' => Tools::str2url($variant),
 				'type' => $product_type,
 				'position' => $index ? $index : '0',
 				'quantity' => $product_qty,
@@ -543,7 +546,7 @@ class Ganalytics extends Module
 		{
 			$ga_product = array(
 				'id' => $product_id,
-				'name' => Tools::jsonEncode($product['name'])
+				'name' => Tools::str2url($product['name'])
 			);
 		}
 		return $ga_product;
@@ -847,6 +850,13 @@ class Ganalytics extends Module
 			$this->context->cookie->ga_cart = serialize($gacart);
 		}
 	}
+	
+        public function hookProcessCarrier($params){
+		if(isset($params['cart']->id_carrier)){
+			$carrier_name = Db::getInstance()->getValue('SELECT name FROM `'._DB_PREFIX_.'carrier` WHERE id_carrier = '.(int)$params['cart']->id_carrier);
+			$this->context->cookie->ga_cart .= 'MBG.addCheckoutOption(2,\''.$carrier_name.'\');';
+		}
+        }
 
 	protected function checkForUpdates()
 	{
