@@ -30,6 +30,12 @@ var GoogleAnalyticEnhancedECommerce = {
 	setCurrency: function(Currency) {
 		ga('set', '&cu', Currency);
 	},
+	
+        setCampaign: function(Name,Source,Medium){
+            ga('set', 'campaignName', Name);
+            ga('set', 'campaignSource', Source);
+            ga('set', 'campaignMedium', Medium);
+        },
 
 	add: function(Product, Order, Impression) {
 		var Products = {};
