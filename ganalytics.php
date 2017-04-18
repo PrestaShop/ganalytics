@@ -537,7 +537,7 @@ class Ganalytics extends Module
 				'quantity' => $product_qty,
 				'list' => Tools::getValue('controller'),
 				'url' => isset($product['link']) ? urlencode($product['link']) : '',
-				'price' => number_format($product['price'], '2')
+				'price' => number_format($product['price'], 2, '.', '')
 			);
 		}
 		else
