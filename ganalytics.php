@@ -282,19 +282,36 @@ class Ganalytics extends Module
 	/**
 	 * Return a detailed transaction for Google Analytics
 	 */
-	public function wrapOrder($id_order)
+	public function wrapOrder($order,$backoffice=false)
 	{
-		$order = new Order((int)$id_order);
+            $js = '';
+            if(!Validate::isLoadedObject($order)){
+                $order = new Order((int)$order);
+            }
 
-		if (Validate::isLoadedObject($order))
-			return array(
-				'id' => $id_order,
-				'affiliation' => Shop::isFeatureActive() ? $this->context->shop->name : Configuration::get('PS_SHOP_NAME'),
-				'revenue' => $order->total_paid,
-				'shipping' => $order->total_shipping,
-				'tax' => $order->total_paid_tax_incl - $order->total_paid_tax_excl,
-				'url' => $this->context->link->getAdminLink('AdminGanalyticsAjax'),
-				'customer' => $order->id_customer);
+            if (Validate::isLoadedObject($order)){
+                $order_products = array();
+                $cart = new Cart($order->id_cart);
+                foreach ($cart->getProducts() as $order_product){
+                    $order_products[] = $this->wrapProduct($order_product, array(), 0, true);
+                }
+
+                $order = array(
+                    'id' => $order->id,
+                    'affiliation' => (version_compare(_PS_VERSION_, '1.5', '>=') && Shop::isFeatureActive()) ? $this->context->shop->name : Configuration::get('PS_SHOP_NAME'),
+                    'revenue' => $order->total_paid,
+                    'shipping' => $order->total_shipping,
+                    'tax' => $order->total_paid_tax_incl - $order->total_paid_tax_excl,
+                    'url' => $backoffice?$this->context->link->getAdminLink('AdminGanalyticsAjax'):$this->context->link->getModuleLink('ganalytics', 'ajax', array(), true),
+                    'customer' => $order->id_customer);
+
+                if($backoffice){
+                    Db::getInstance()->execute('UPDATE `'._DB_PREFIX_.'ganalytics` SET date_add = NOW(), sent = 1 WHERE id_order = '.(int)$order['id'].' AND id_shop = \''.(int)$this->context->shop->id.'\'');
+                }
+
+                $js = $this->addTransaction($order_products, $order);
+            }
+            return $js;
 	}
 
 	/**
@@ -311,20 +328,7 @@ class Ganalytics extends Module
 				Db::getInstance()->Execute('INSERT INTO `'._DB_PREFIX_.'ganalytics` (id_order, id_shop, sent, date_add) VALUES ('.(int)$order->id.', '.(int)$this->context->shop->id.', 0, NOW())');
 				if ($order->id_customer == $this->context->cookie->id_customer)
 				{
-					$order_products = array();
-					$cart = new Cart($order->id_cart);
-					foreach ($cart->getProducts() as $order_product)
-						$order_products[] = $this->wrapProduct($order_product, array(), 0, true);
-
-					$transaction = array(
-						'id' => $order->id,
-						'affiliation' => (version_compare(_PS_VERSION_, '1.5', '>=') && Shop::isFeatureActive()) ? $this->context->shop->name : Configuration::get('PS_SHOP_NAME'),
-						'revenue' => $order->total_paid,
-						'shipping' => $order->total_shipping,
-						'tax' => $order->total_paid_tax_incl - $order->total_paid_tax_excl,
-						'url' => $this->context->link->getModuleLink('ganalytics', 'ajax', array(), true),
-						'customer' => $order->id_customer);
-					$ga_scripts = $this->addTransaction($order_products, $transaction);
+                                        $ga_scripts = $this->wrapOrder($order);
 
 					$this->js_state = 1;
 					return $this->_runJs($ga_scripts);
@@ -727,13 +731,7 @@ class Ganalytics extends Module
 					if ($ga_order_records)
 						foreach ($ga_order_records as $row)
 						{
-							$transaction = $this->wrapOrder($row['id_order']);
-							if (!empty($transaction))
-							{
-								Db::getInstance()->execute('UPDATE `'._DB_PREFIX_.'ganalytics` SET date_add = NOW(), sent = 1 WHERE id_order = '.(int)$row['id_order'].' AND id_shop = \''.(int)$this->context->shop->id.'\'');
-								$transaction = Tools::jsonEncode($transaction);
-								$ga_scripts .= 'MBG.addTransaction('.$transaction.');';
-							}
+							$ga_scripts .=  $this->wrapOrder($row['id_order'],true);
 						}
 
 				}
