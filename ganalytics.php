@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2015 PrestaShop
+ * 2007-2017 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  *  @author    PrestaShop SA <contact@prestashop.com>
- *  @copyright 2007-2015 PrestaShop SA
+ *  @copyright 2007-2017 PrestaShop SA
  *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  *  International Registered Trademark & Property of PrestaShop SA
  */
@@ -39,7 +39,7 @@ class Ganalytics extends Module
 	{
 		$this->name = 'ganalytics';
 		$this->tab = 'analytics_stats';
-		$this->version = '2.3.4';
+		$this->version = '2.4.0';
 		$this->author = 'PrestaShop';
 		$this->module_key = 'fd2aaefea84ac1bb512e6f1878d990b8';
 		$this->bootstrap = true;
@@ -64,7 +64,7 @@ class Ganalytics extends Module
 		if (!parent::install() || !$this->installTab() || !$this->registerHook('header') || !$this->registerHook('adminOrder')
 			|| !$this->registerHook('footer') || !$this->registerHook('home')
 			|| !$this->registerHook('productfooter') || !$this->registerHook('orderConfirmation')
-			|| !$this->registerHook('backOfficeHeader'))
+			|| !$this->registerHook('backOfficeHeader') || !$this->registerHook('processCarrier'))
 			return false;
 
 		if (version_compare(_PS_VERSION_, '1.5', '>=')
@@ -261,10 +261,10 @@ class Ganalytics extends Module
 				(function(i,s,o,g,r,a,m){i[\'GoogleAnalyticsObject\']=r;i[r]=i[r]||function(){
 				(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
 				m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-				})(window,document,\'script\',\'//www.google-analytics.com/analytics.js\',\'ga\');
+				})(window,document,\'script\',\'https://www.google-analytics.com/analytics.js\',\'ga\');
 				ga(\'create\', \''.Tools::safeOutput(Configuration::get('GA_ACCOUNT_ID')).'\', \'auto\');
 				ga(\'require\', \'ec\');'
-				.(($user_id && !$back_office) ? 'ga(\'set\', \'&uid\', \''.$user_id.'\');': '')
+				.(($user_id && !$back_office) ? 'ga(\'set\', \'userId\', \''.$user_id.'\');': '')
 				.($back_office ? 'ga(\'set\', \'nonInteraction\', true);' : '')
 			.'</script>';
 	}
@@ -316,6 +316,8 @@ class Ganalytics extends Module
 					foreach ($cart->getProducts() as $order_product)
 						$order_products[] = $this->wrapProduct($order_product, array(), 0, true);
 
+					$ga_scripts = 'MBG.addCheckoutOption(3,\''.$order->payment.'\');';
+
 					$transaction = array(
 						'id' => $order->id,
 						'affiliation' => (version_compare(_PS_VERSION_, '1.5', '>=') && Shop::isFeatureActive()) ? $this->context->shop->name : Configuration::get('PS_SHOP_NAME'),
@@ -324,8 +326,8 @@ class Ganalytics extends Module
 						'tax' => $order->total_paid_tax_incl - $order->total_paid_tax_excl,
 						'url' => $this->context->link->getModuleLink('ganalytics', 'ajax', array(), true),
 						'customer' => $order->id_customer);
-					$ga_scripts = $this->addTransaction($order_products, $transaction);
-
+					$ga_scripts .= $this->addTransaction($order_products, $transaction);
+					
 					$this->js_state = 1;
 					return $this->_runJs($ga_scripts);
 				}
@@ -364,6 +366,7 @@ class Ganalytics extends Module
 
 		if ($controller_name == 'order' || $controller_name == 'orderopc')
 		{
+			$this->js_state = 1;
 			$this->eligible = 1;
 			$step = Tools::getValue('step');
 			if (empty($step))
@@ -527,23 +530,23 @@ class Ganalytics extends Module
 		{
 			$ga_product = array(
 				'id' => $product_id,
-				'name' => Tools::jsonEncode($product['name']),
-				'category' => Tools::jsonEncode($product['category']),
-				'brand' => isset($product['manufacturer_name']) ? Tools::jsonEncode($product['manufacturer_name']) : '',
-				'variant' => Tools::jsonEncode($variant),
+				'name' => Tools::str2url($product['name']),
+				'category' => Tools::str2url($product['category']),
+				'brand' => isset($product['manufacturer_name']) ? Tools::str2url($product['manufacturer_name']) : '',
+				'variant' => Tools::str2url($variant),
 				'type' => $product_type,
 				'position' => $index ? $index : '0',
 				'quantity' => $product_qty,
 				'list' => Tools::getValue('controller'),
 				'url' => isset($product['link']) ? urlencode($product['link']) : '',
-				'price' => number_format($product['price'], '2')
+				'price' => number_format($product['price'], 2, '.', '')
 			);
 		}
 		else
 		{
 			$ga_product = array(
 				'id' => $product_id,
-				'name' => Tools::jsonEncode($product['name'])
+				'name' => Tools::str2url($product['name'])
 			);
 		}
 		return $ga_product;
@@ -847,6 +850,13 @@ class Ganalytics extends Module
 			$this->context->cookie->ga_cart = serialize($gacart);
 		}
 	}
+	
+        public function hookProcessCarrier($params){
+		if(isset($params['cart']->id_carrier)){
+			$carrier_name = Db::getInstance()->getValue('SELECT name FROM `'._DB_PREFIX_.'carrier` WHERE id_carrier = '.(int)$params['cart']->id_carrier);
+			$this->context->cookie->ga_cart .= 'MBG.addCheckoutOption(2,\''.$carrier_name.'\');';
+		}
+        }
 
 	protected function checkForUpdates()
 	{
