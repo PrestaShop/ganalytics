@@ -302,7 +302,7 @@ class Ganalytics extends Module
 	 */
 	public function hookOrderConfirmation($params)
 	{
-		$order = $params['objOrder'];
+		$order = $params['objOrder']; /** @var Order $order */
 		if (Validate::isLoadedObject($order) && $order->getCurrentState() != (int)Configuration::get('PS_OS_ERROR'))
 		{
 			$ga_order_sent = Db::getInstance()->getValue('SELECT id_order FROM `'._DB_PREFIX_.'ganalytics` WHERE id_order = '.(int)$order->id);
@@ -311,12 +311,19 @@ class Ganalytics extends Module
 				Db::getInstance()->Execute('INSERT INTO `'._DB_PREFIX_.'ganalytics` (id_order, id_shop, sent, date_add) VALUES ('.(int)$order->id.', '.(int)$this->context->shop->id.', 0, NOW())');
 				if ($order->id_customer == $this->context->cookie->id_customer)
 				{
+                    $ga_scripts = '';
+
+                    if ((int)$order->id_carrier > 0) { // Not a order with virtual products only
+                        $carrierName = Db::getInstance()->getValue('SELECT name FROM ' . _DB_PREFIX_ . 'carrier WHERE id_carrier = ' . (int)$order->id_carrier);
+                        $ga_scripts .= 'MBG.addCheckoutOption(2, \'' . $carrierName . '\');' . PHP_EOL;
+                    }
+
 					$order_products = array();
 					$cart = new Cart($order->id_cart);
 					foreach ($cart->getProducts() as $order_product)
 						$order_products[] = $this->wrapProduct($order_product, array(), 0, true);
 
-					$ga_scripts = 'MBG.addCheckoutOption(3,\''.$order->payment.'\');';
+					$ga_scripts .= 'MBG.addCheckoutOption(3, \''.$order->payment.'\');' . PHP_EOL;
 
 					$transaction = array(
 						'id' => $order->id,
@@ -347,17 +354,17 @@ class Ganalytics extends Module
 		{
 			$this->filterable = 0;
 
-			$gacarts = unserialize($this->context->cookie->ga_cart);
-			foreach ($gacarts as $gacart)
-			{
-				if ($gacart['quantity'] > 0)
-					$ga_scripts .= 'MBG.addToCart('.Tools::jsonEncode($gacart).');';
-				elseif ($gacart['quantity'] < 0)
-				{
-					$gacart['quantity'] = abs($gacart['quantity']);
-					$ga_scripts .= 'MBG.removeFromCart('.Tools::jsonEncode($gacart).');';
-				}
-			}
+			$gacarts = json_decode($this->context->cookie->ga_cart, true);
+            if (is_array($gacarts)) {
+                foreach ($gacarts as $gacart) {
+                    if ($gacart['quantity'] > 0) {
+                        $ga_scripts .= 'MBG.addToCart(' . Tools::jsonEncode($gacart) . ');';
+                    } elseif ($gacart['quantity'] < 0) {
+                        $gacart['quantity'] = abs($gacart['quantity']);
+                        $ga_scripts         .= 'MBG.removeFromCart(' . Tools::jsonEncode($gacart) . ');';
+                    }
+                }
+            }
 			unset($this->context->cookie->ga_cart);
 		}
 
@@ -826,10 +833,13 @@ class Ganalytics extends Module
 			else
 				$id_product = Tools::getValue('id_product');
 
-			if (isset($this->context->cookie->ga_cart))
-				$gacart = unserialize($this->context->cookie->ga_cart);
-			else
-				$gacart = array();
+            $gacart = array();
+            if (isset($this->context->cookie->ga_cart)) {
+                $gacart = json_decode($this->context->cookie->ga_cart, true);
+                if (false === is_array($gacart)) {
+                    $gacart = array();
+                }
+            }
 
 			if ($cart['removeAction'] == 'delete')
 				$ga_products['quantity'] = -1;
@@ -847,16 +857,9 @@ class Ganalytics extends Module
 			}
 
 			$gacart[$id_product] = $ga_products;
-			$this->context->cookie->ga_cart = serialize($gacart);
+			$this->context->cookie->ga_cart = json_encode($gacart);
 		}
 	}
-	
-        public function hookProcessCarrier($params){
-		if(isset($params['cart']->id_carrier)){
-			$carrier_name = Db::getInstance()->getValue('SELECT name FROM `'._DB_PREFIX_.'carrier` WHERE id_carrier = '.(int)$params['cart']->id_carrier);
-			$this->context->cookie->ga_cart .= 'MBG.addCheckoutOption(2,\''.$carrier_name.'\');';
-		}
-        }
 
 	protected function checkForUpdates()
 	{
