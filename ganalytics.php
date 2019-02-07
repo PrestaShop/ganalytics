@@ -649,7 +649,12 @@ class Ganalytics extends Module
 		if (Configuration::get('GA_ACCOUNT_ID'))
 		{
 			$runjs_code = '';
-			if (!empty($js_code))
+               
+			if (!empty($js_code)){
+	                        if($backoffice){
+                            		$js_code .= 'MBG.setCampaign(\'backoffice-orders\',\'backoffice\',\'cms\');';
+                        	}
+			
 				$runjs_code .= '
 				<script type="text/javascript">
 					jQuery(document).ready(function(){
@@ -658,6 +663,7 @@ class Ganalytics extends Module
 						'.$js_code.'
 					});
 				</script>';
+			}
 
 			if (($this->js_state) != 1 && ($backoffice == 0))
 				$runjs_code .= '
