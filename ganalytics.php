@@ -326,8 +326,16 @@ class Ganalytics extends Module
 						'tax' => $order->total_paid_tax_incl - $order->total_paid_tax_excl,
 						'url' => $this->context->link->getModuleLink('ganalytics', 'ajax', array(), true),
 						'customer' => $order->id_customer);
-					$ga_scripts .= $this->addTransaction($order_products, $transaction);
 					
+					Db::getInstance()->execute('UPDATE `'._DB_PREFIX_.'ganalytics` SET date_add = NOW(), sent = 1 '
+                                                                        . ' WHERE id_order = ' .(int) $order->id
+                                                                        .' AND id_shop = \''.(int) $this->context->shop->id.'\' '
+                                                                        .' AND sent = 0   '   
+                                                                        . ' ');
+                                        $affectedRows = Db::getInstance()->Affected_Rows();
+                                        if ( $affectedRows == 1) {
+						$ga_scripts .= $this->addTransaction($order_products, $transaction);
+					}
 					$this->js_state = 1;
 					return $this->_runJs($ga_scripts);
 				}
