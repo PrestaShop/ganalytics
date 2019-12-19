@@ -127,20 +127,22 @@ var GoogleAnalyticEnhancedECommerce = {
 	},
 
 	addProductClick: function(Product) {
-		var ClickPoint = jQuery('a[href$="' + Product.url + '"].quick-view');
+		var ClickPoint = document.querySelector('a[href$="' + Product.url + '"].quick-view');
 
-		ClickPoint.on("click", function() {
-			GoogleAnalyticEnhancedECommerce.add(Product);
-			ga('ec:setAction', 'click', {
-				list: Product.list
+		if (ClickPoint && ClickPoint.length > 0) {
+			ClickPoint.addEventListener('click', function() {
+				GoogleAnalyticEnhancedECommerce.add(Product);
+				ga('ec:setAction', 'click', {
+					list: Product.list
+				});
+	
+				ga('send', 'event', 'Product Quick View', 'click', Product.list, {
+					'hitCallback': function() {
+						return !ga.loaded;
+					}
+				});
 			});
-
-			ga('send', 'event', 'Product Quick View', 'click', Product.list, {
-				'hitCallback': function() {
-					return !ga.loaded;
-				}
-			});
-		});
+		}
 
 	},
 
