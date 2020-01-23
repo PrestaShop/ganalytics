@@ -27,166 +27,166 @@
 
 var GoogleAnalyticEnhancedECommerce = {
 
-	setCurrency: function(Currency) {
-		ga('set', '&cu', Currency);
-	},
-	
-        setCampaign: function(Name,Source,Medium){
-            ga('set', 'campaignName', Name);
-            ga('set', 'campaignSource', Source);
-            ga('set', 'campaignMedium', Medium);
-        },
+    setCurrency: function (Currency) {
+        ga('set', '&cu', Currency);
+    },
 
-	add: function(Product, Order, Impression) {
-		var Products = {};
-		var Orders = {};
+    setCampaign: function (Name, Source, Medium) {
+        ga('set', 'campaignName', Name);
+        ga('set', 'campaignSource', Source);
+        ga('set', 'campaignMedium', Medium);
+    },
 
-		var ProductFieldObject = ['id', 'name', 'category', 'brand', 'variant', 'price', 'quantity', 'coupon', 'list', 'position', 'dimension1'];
-		var OrderFieldObject = ['id', 'affiliation', 'revenue', 'tax', 'shipping', 'coupon', 'list', 'step', 'option'];
+    add: function (Product, Order, Impression) {
+        var Products = {};
+        var Orders = {};
 
-		if (Product != null) {
-			if (Impression && Product.quantity !== undefined) {
-				delete Product.quantity;
-			}
+        var ProductFieldObject = ['id', 'name', 'category', 'brand', 'variant', 'price', 'quantity', 'coupon', 'list', 'position', 'dimension1'];
+        var OrderFieldObject = ['id', 'affiliation', 'revenue', 'tax', 'shipping', 'coupon', 'list', 'step', 'option'];
 
-			for (var productKey in Product) {
-				for (var i = 0; i < ProductFieldObject.length; i++) {
-					if (productKey.toLowerCase() == ProductFieldObject[i]) {
-						if (Product[productKey] != null) {
-							Products[productKey.toLowerCase()] = Product[productKey];
-						}
+        if (Product != null) {
+            if (Impression && Product.quantity !== undefined) {
+                delete Product.quantity;
+            }
 
-					}
-				}
+            for (var productKey in Product) {
+                for (var i = 0; i < ProductFieldObject.length; i++) {
+                    if (productKey.toLowerCase() == ProductFieldObject[i]) {
+                        if (Product[productKey] != null) {
+                            Products[productKey.toLowerCase()] = Product[productKey];
+                        }
 
-			}
-		}
+                    }
+                }
 
-		if (Order != null) {
-			for (var orderKey in Order) {
-				for (var j = 0; j < OrderFieldObject.length; j++) {
-					if (orderKey.toLowerCase() == OrderFieldObject[j]) {
-						Orders[orderKey.toLowerCase()] = Order[orderKey];
-					}
-				}
-			}
-		}
+            }
+        }
 
-		if (Impression) {
-			ga('ec:addImpression', Products);
-		} else {
-			ga('ec:addProduct', Products);
-		}
-	},
+        if (Order != null) {
+            for (var orderKey in Order) {
+                for (var j = 0; j < OrderFieldObject.length; j++) {
+                    if (orderKey.toLowerCase() == OrderFieldObject[j]) {
+                        Orders[orderKey.toLowerCase()] = Order[orderKey];
+                    }
+                }
+            }
+        }
 
-	addProductDetailView: function(Product) {
-		this.add(Product);
-		ga('ec:setAction', 'detail');
-		ga('send', 'event', 'UX', 'detail', 'Product Detail View',{'nonInteraction': 1});
-	},
+        if (Impression) {
+            ga('ec:addImpression', Products);
+        } else {
+            ga('ec:addProduct', Products);
+        }
+    },
 
-	addToCart: function(Product) {
-		this.add(Product);
-		ga('ec:setAction', 'add');
-		ga('send', 'event', 'UX', 'click', 'Add to Cart'); // Send data using an event.
-	},
+    addProductDetailView: function (Product) {
+        this.add(Product);
+        ga('ec:setAction', 'detail');
+        ga('send', 'event', 'UX', 'detail', 'Product Detail View', {'nonInteraction': 1});
+    },
 
-	removeFromCart: function(Product) {
-		this.add(Product);
-		ga('ec:setAction', 'remove');
-		ga('send', 'event', 'UX', 'click', 'Remove From cart'); // Send data using an event.
-	},
+    addToCart: function (Product) {
+        this.add(Product);
+        ga('ec:setAction', 'add');
+        ga('send', 'event', 'UX', 'click', 'Add to Cart'); // Send data using an event.
+    },
 
-	addProductImpression: function(Product) {
-		//ga('send', 'pageview');
-	},
+    removeFromCart: function (Product) {
+        this.add(Product);
+        ga('ec:setAction', 'remove');
+        ga('send', 'event', 'UX', 'click', 'Remove From cart'); // Send data using an event.
+    },
 
-	/**
-	id, type, affiliation, revenue, tax, shipping and coupon.
-	**/
-	refundByOrderId: function(Order) {
-		/**
-		 * Refund an entire transaction.
-		 **/
-		ga('ec:setAction', 'refund', {
-			'id': Order.id // Transaction ID is only required field for full refund.
-		});
-		ga('send', 'event', 'Ecommerce', 'Refund', {'nonInteraction': 1});
-	},
+    addProductImpression: function (Product) {
+        //ga('send', 'pageview');
+    },
 
-	refundByProduct: function(Order) {
-		/**
-		 * Refund a single product.
-		 **/
-		//this.add(Product);
+    /**
+     id, type, affiliation, revenue, tax, shipping and coupon.
+     **/
+    refundByOrderId: function (Order) {
+        /**
+         * Refund an entire transaction.
+         **/
+        ga('ec:setAction', 'refund', {
+            'id': Order.id // Transaction ID is only required field for full refund.
+        });
+        ga('send', 'event', 'Ecommerce', 'Refund', {'nonInteraction': 1});
+    },
 
-		ga('ec:setAction', 'refund', {
-			'id': Order.id, // Transaction ID is required for partial refund.
-		});
-		ga('send', 'event', 'Ecommerce', 'Refund', {'nonInteraction': 1});
-	},
+    refundByProduct: function (Order) {
+        /**
+         * Refund a single product.
+         **/
+        //this.add(Product);
 
-	addProductClick: function(Product) {
-		var ClickPoint = jQuery('a[href$="' + Product.url + '"].quick-view');
+        ga('ec:setAction', 'refund', {
+            'id': Order.id, // Transaction ID is required for partial refund.
+        });
+        ga('send', 'event', 'Ecommerce', 'Refund', {'nonInteraction': 1});
+    },
 
-		ClickPoint.on("click", function() {
-			GoogleAnalyticEnhancedECommerce.add(Product);
-			ga('ec:setAction', 'click', {
-				list: Product.list
-			});
+    addProductClick: function (Product) {
+        var ClickPoint = jQuery('a[href$="' + Product.url + '"].quick-view');
 
-			ga('send', 'event', 'Product Quick View', 'click', Product.list, {
-				'hitCallback': function() {
-					return !ga.loaded;
-				}
-			});
-		});
+        ClickPoint.on("click", function () {
+            GoogleAnalyticEnhancedECommerce.add(Product);
+            ga('ec:setAction', 'click', {
+                list: Product.list
+            });
 
-	},
+            ga('send', 'event', 'Product Quick View', 'click', Product.list, {
+                'hitCallback': function () {
+                    return !ga.loaded;
+                }
+            });
+        });
 
-	addProductClickByHttpReferal: function(Product) {
-		this.add(Product);
-		ga('ec:setAction', 'click', {
-			list: Product.list
-		});
+    },
 
-		ga('send', 'event', 'Product Click', 'click', Product.list, {
-			'nonInteraction': 1,
-			'hitCallback': function() {
-				return !ga.loaded;
-			}
-		});
+    addProductClickByHttpReferal: function (Product) {
+        this.add(Product);
+        ga('ec:setAction', 'click', {
+            list: Product.list
+        });
 
-	},
+        ga('send', 'event', 'Product Click', 'click', Product.list, {
+            'nonInteraction': 1,
+            'hitCallback': function () {
+                return !ga.loaded;
+            }
+        });
 
-	addTransaction: function(Order) {
+    },
 
-		//this.add(Product);
-		ga('ec:setAction', 'purchase', Order);
-		ga('send', 'event','Transaction','purchase', {
-			'hitCallback': function() {
-				$.get(Order.url, {
-					orderid: Order.id,
-					customer: Order.customer
-				});
-			}
-		});
+    addTransaction: function (Order) {
 
-	},
+        //this.add(Product);
+        ga('ec:setAction', 'purchase', Order);
+        ga('send', 'event', 'Transaction', 'purchase', {
+            'hitCallback': function () {
+                $.get(Order.url, {
+                    orderid: Order.id,
+                    customer: Order.customer
+                });
+            }
+        });
 
-	addCheckout: function(Step) {
-		ga('ec:setAction', 'checkout', {
-			'step': Step
-			//'option':'Visa'
-		});
-		ga('send', 'pageview');
-	},
-	
-	addCheckoutOption: function(Step,Option) {
-		ga('ec:setAction', 'checkout_option', {
-			'step': Step,
-			'option': Option
-		});
-		ga('send', 'event', 'Checkout', 'Option');
-  	}
+    },
+
+    addCheckout: function (Step) {
+        ga('ec:setAction', 'checkout', {
+            'step': Step
+            //'option':'Visa'
+        });
+        ga('send', 'pageview');
+    },
+
+    addCheckoutOption: function (Step, Option) {
+        ga('ec:setAction', 'checkout_option', {
+            'step': Step,
+            'option': Option
+        });
+        ga('send', 'event', 'Checkout', 'Option');
+    }
 };
