@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<module>
+	<name>ganalytics</name>
+	<displayName><![CDATA[Google Analytics]]></displayName>
+	<version><![CDATA[2.4.0]]></version>
+	<description><![CDATA[Adquiera conocimientos claros de los datos importantes sobre sus clientes, a trav&eacute;s de Google Analytics]]></description>
+	<author><![CDATA[PrestaShop]]></author>
+	<tab><![CDATA[analytics_stats]]></tab>
+	<confirmUninstall><![CDATA[¿Está seguro que quiere desinstalar Google Analytics? perderá todos los datos relacionados con este módulo.]]></confirmUninstall>
+	<is_configurable>1</is_configurable>
+	<need_instance>1</need_instance>
+	<limited_countries></limited_countries>
+</module>
