@@ -253,17 +253,15 @@ class Ganalytics extends Module
         ) {
             $user_id = (int)$this->context->customer->id;
         }
-        $gaMeasurementId = $this->_getMeasurementId();
-        $tag = "<!-- Global Site Tag (gtag.js) - Google Analytics -->
-                <script async src='https://www.googletagmanager.com/gtag/js?id=$gaMeasurementId'></script>
-                <script>
-                  window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
-                  ";
-        if (!$back_office) $tag .= "gtag('config','$gaMeasurementId');";
-        if ($user_id && !$back_office) $tag .= "gtag('user_id',$user_id);";
-        $tag .= "</script>";
-        return $tag;
+
+        $this->smarty->assign(
+            array(
+                'back_office' => $back_office,
+                'user_id' => $user_id,
+                'ga_measurement_id' => $this->_getMeasurementId(),
+            )
+        );
+        return $this->display(__FILE__, 'googleanalytics.tpl');
     }
 
     public function hookHeader()
@@ -284,9 +282,9 @@ class Ganalytics extends Module
 
         if (Validate::isLoadedObject($order))
             return array(
-                'id' => $id_order,
+                'transaction_id' => $id_order,
                 'affiliation' => Shop::isFeatureActive() ? $this->context->shop->name : Configuration::get('PS_SHOP_NAME'),
-                'revenue' => $order->total_paid,
+                'value' => $order->total_paid,
                 'shipping' => $order->total_shipping,
                 'tax' => $order->total_paid_tax_incl - $order->total_paid_tax_excl,
                 'url' => $this->context->link->getAdminLink('AdminGanalyticsAjax'),
@@ -309,17 +307,18 @@ class Ganalytics extends Module
                     foreach ($cart->getProducts() as $order_product)
                         $order_products[] = $this->wrapProduct($order_product, array(), 0, true);
 
-                    $ga_scripts = 'MBG.addCheckoutOption(3,\'' . $order->payment . '\');';
+                    $ga_scripts = 'MBG.addCheckoutOption(3, \'payment\',\'' . $order->payment . '\');';
 
                     $transaction = array(
-                        'id' => $order->id,
+                        'transaction_id' => $order->id,
                         'affiliation' => (version_compare(_PS_VERSION_, '1.5', '>=') && Shop::isFeatureActive()) ? $this->context->shop->name : Configuration::get('PS_SHOP_NAME'),
-                        'revenue' => $order->total_paid,
+                        'value' => $order->total_paid,
                         'shipping' => $order->total_shipping,
                         'tax' => $order->total_paid_tax_incl - $order->total_paid_tax_excl,
                         'url' => $this->context->link->getModuleLink('ganalytics', 'ajax', array(), true),
-                        'customer' => $order->id_customer);
-                    $ga_scripts .= $this->addTransaction($order_products, $transaction);
+                        'customer' => $order->id_customer,
+                        'items' => $order_products);
+                    $ga_scripts .= $this->addTransaction($transaction);
 
                     return $this->_runJs($ga_scripts);
                 }
@@ -352,13 +351,15 @@ class Ganalytics extends Module
         $controller_name = Tools::getValue('controller');
         $products = $this->wrapProducts($this->context->smarty->getTemplateVars('products'), array(), true);
 
-        if ($controller_name == 'order' || $controller_name == 'orderopc') {
+        if ($controller_name == 'order' || $controller_name == 'orderopc' || $controller_name == 'supercheckout') {
             $this->eligible = 1;
             $step = Tools::getValue('step');
             if (empty($step))
                 $step = 0;
-            $ga_scripts .= $this->addProductFromCheckout($products, $step);
-            $ga_scripts .= 'MBG.addCheckout(\'' . (int)$step . '\');';
+            $ga_scripts .= 'MBG.addCheckout(\'' . (int)$step . '\',[';
+            foreach ($products as $product)
+                $ga_scripts .= Tools::jsonEncode($product) . ',';
+            $ga_scripts .= ']);';
         }
 
         if (version_compare(_PS_VERSION_, '1.5', '<')) {
@@ -468,11 +469,14 @@ class Ganalytics extends Module
 
     /**
      * wrap product to provide a standard product information for google analytics script
+     * @param $product
+     * @param $extras
+     * @param int $index
+     * @param bool $full
+     * @return array
      */
-    public function wrapProduct($product, $extras, $index = 0, $full = false)
+    private function wrapProduct($product, $extras, $index = 0, $full = false)
     {
-        $ga_product = '';
-
         $variant = null;
         if (isset($product['attributes_small']))
             $variant = $product['attributes_small'];
@@ -494,12 +498,6 @@ class Ganalytics extends Module
         if (!empty($product['id_product_attribute']))
             $product_id .= '-' . $product['id_product_attribute'];
 
-        $product_type = 'typical';
-        if (isset($product['pack']) && $product['pack'] == 1)
-            $product_type = 'pack';
-        elseif (isset($product['virtual']) && $product['virtual'] == 1)
-            $product_type = 'virtual';
-
         if ($full) {
             $ga_product = array(
                 'id' => $product_id,
@@ -507,10 +505,9 @@ class Ganalytics extends Module
                 'category' => Tools::str2url($product['category']),
                 'brand' => isset($product['manufacturer_name']) ? Tools::str2url($product['manufacturer_name']) : '',
                 'variant' => Tools::str2url($variant),
-                'type' => $product_type,
-                'position' => $index ? $index : '0',
+                'list_position' => $index ? $index : '0',
                 'quantity' => $product_qty,
-                'list' => Tools::getValue('controller'),
+                'list_name' => Tools::getValue('controller'),
                 'url' => isset($product['link']) ? urlencode($product['link']) : '',
                 'price' => number_format($product['price'], 2, '.', '')
             );
@@ -526,16 +523,9 @@ class Ganalytics extends Module
     /**
      * add order transaction
      */
-    public function addTransaction($products, $order)
+    public function addTransaction($transaction)
     {
-        if (!is_array($products))
-            return;
-
-        $js = '';
-        foreach ($products as $product)
-            $js .= 'MBG.add(' . Tools::jsonEncode($product) . ');';
-
-        return $js . 'MBG.addTransaction(' . Tools::jsonEncode($order) . ');';
+        return 'MBG.addTransaction(' . Tools::jsonEncode($transaction) . ');';
     }
 
     /**
@@ -546,10 +536,10 @@ class Ganalytics extends Module
         if (!is_array($products))
             return;
 
-        $js = '';
+        $js = 'MBG.viewItemList([';
         foreach ($products as $product)
-            $js .= 'MBG.add(' . Tools::jsonEncode($product) . ",'',true);";
-
+            $js .= Tools::jsonEncode($product) . ',';
+        $js .= ']);';
         return $js;
     }
 
@@ -577,20 +567,6 @@ class Ganalytics extends Module
         return $js;
     }
 
-    /**
-     * Add product checkout info
-     */
-    public function addProductFromCheckout($products)
-    {
-        if (!is_array($products))
-            return;
-
-        $js = '';
-        foreach ($products as $product)
-            $js .= 'MBG.add(' . Tools::jsonEncode($product) . ');';
-
-        return $js;
-    }
 
     /**
      * hook product page footer to load JS for product details view
@@ -620,14 +596,16 @@ class Ganalytics extends Module
 
             if (!empty($js_code)) {
                 if ($backoffice) {
-                    $js_code .= 'MBG.setCampaign(\'backoffice-orders\',\'backoffice\',\'cms\');';
+                    $js_code .= 'MBG.setCampaign(\'backoffice-orders\',\'backoffice\',\'cms\',\'' . $this->_getMeasurementId() . '\');';
                 }
 
                 $runjs_code .= '
                 <script type="text/javascript">
                     jQuery(document).ready(function(){
                         var MBG = GoogleAnalyticEnhancedECommerce;
-                        MBG.setCurrency(\'' . Tools::safeOutput($this->context->currency->iso_code) . '\');
+                        MBG.setCurrency(
+                            \'' . Tools::safeOutput($this->context->currency->iso_code) . '\',
+                            \'' . $this->_getMeasurementId() . '\');
                         ' . $js_code . '
                     });
                 </script>';
@@ -718,7 +696,7 @@ class Ganalytics extends Module
                         'quantity' => $qty)
                 ) . ');';
         }
-        $this->context->cookie->ga_admin_refund = $ga_scripts . 'MBG.refundByProduct(' . Tools::jsonEncode(array('id' => $params['order']->id)) . ');';
+        $this->context->cookie->ga_admin_refund = $ga_scripts . 'MBG.refundByOrderId(' . Tools::jsonEncode(array('id' => $params['order']->id)) . ');';
     }
 
     /**
@@ -800,7 +778,7 @@ class Ganalytics extends Module
     {
         if (isset($params['cart']->id_carrier)) {
             $carrier_name = Db::getInstance()->getValue('SELECT name FROM `' . _DB_PREFIX_ . 'carrier` WHERE id_carrier = ' . (int)$params['cart']->id_carrier);
-            $this->context->cookie->ga_cart .= 'MBG.addCheckoutOption(2,\'' . $carrier_name . '\');';
+            $this->context->cookie->ga_cart .= 'MBG.addCheckoutOption(2, \'carrier\',\'' . $carrier_name . '\');';
         }
     }
 
