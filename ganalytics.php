@@ -29,7 +29,6 @@ if (!defined('_PS_VERSION_'))
 
 class Ganalytics extends Module
 {
-    protected $js_state = 0;
     protected $eligible = 0;
     protected $filterable = 1;
     protected static $products = array();
@@ -241,6 +240,11 @@ class Ganalytics extends Module
         return $this->display(__FILE__, 'views/templates/admin/configuration.tpl') . $output;
     }
 
+    protected function _getMeasurementId()
+    {
+        return Tools::safeOutput(Configuration::get('GA_ACCOUNT_ID'));
+    }
+
     protected function _getGoogleAnalyticsTag($back_office = false)
     {
         $user_id = null;
@@ -249,19 +253,17 @@ class Ganalytics extends Module
         ) {
             $user_id = (int)$this->context->customer->id;
         }
-
-        return '
-            <script type="text/javascript">
-                (window.gaDevIds=window.gaDevIds||[]).push(\'d6YPbH\');
-                (function(i,s,o,g,r,a,m){i[\'GoogleAnalyticsObject\']=r;i[r]=i[r]||function(){
-                (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-                m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-                })(window,document,\'script\',\'https://www.google-analytics.com/analytics.js\',\'ga\');
-                ga(\'create\', \'' . Tools::safeOutput(Configuration::get('GA_ACCOUNT_ID')) . '\', \'auto\');
-                ga(\'require\', \'ec\');'
-            . (($user_id && !$back_office) ? 'ga(\'set\', \'userId\', \'' . $user_id . '\');' : '')
-            . ($back_office ? 'ga(\'set\', \'nonInteraction\', true);' : '')
-            . '</script>';
+        $gaMeasurementId = $this->_getMeasurementId();
+        $tag = "<!-- Global Site Tag (gtag.js) - Google Analytics -->
+                <script async src='https://www.googletagmanager.com/gtag/js?id=$gaMeasurementId'></script>
+                <script>
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  ";
+        if (!$back_office) $tag .= "gtag('config','$gaMeasurementId');";
+        if ($user_id && !$back_office) $tag .= "gtag('user_id',$user_id);";
+        $tag .= "</script>";
+        return $tag;
     }
 
     public function hookHeader()
@@ -319,7 +321,6 @@ class Ganalytics extends Module
                         'customer' => $order->id_customer);
                     $ga_scripts .= $this->addTransaction($order_products, $transaction);
 
-                    $this->js_state = 1;
                     return $this->_runJs($ga_scripts);
                 }
             }
@@ -332,7 +333,6 @@ class Ganalytics extends Module
     public function hookFooter()
     {
         $ga_scripts = '';
-        $this->js_state = 0;
 
         if (isset($this->context->cookie->ga_cart)) {
             $this->filterable = 0;
@@ -353,7 +353,6 @@ class Ganalytics extends Module
         $products = $this->wrapProducts($this->context->smarty->getTemplateVars('products'), array(), true);
 
         if ($controller_name == 'order' || $controller_name == 'orderopc') {
-            $this->js_state = 1;
             $this->eligible = 1;
             $step = Tools::getValue('step');
             if (empty($step))
@@ -418,7 +417,6 @@ class Ganalytics extends Module
             $ga_scripts .= $this->addProductImpression($ga_homebestsell_product_list) . $this->addProductClick($ga_homebestsell_product_list);
         }
 
-        $this->js_state = 1;
         return $this->_runJs($this->filter($ga_scripts));
     }
 
@@ -608,7 +606,6 @@ class Ganalytics extends Module
             if (isset($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERER'], $_SERVER['HTTP_HOST']) > 0)
                 $js .= $this->addProductClickByHttpReferal(array($ga_product));
 
-            $this->js_state = 1;
             return $this->_runJs($js);
         }
     }
@@ -636,11 +633,6 @@ class Ganalytics extends Module
                 </script>';
             }
 
-            if (($this->js_state) != 1 && ($backoffice == 0))
-                $runjs_code .= '
-                <script type="text/javascript">
-                    ga(\'send\', \'pageview\');
-                </script>';
 
             return $runjs_code;
         }
