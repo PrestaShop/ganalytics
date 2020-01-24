@@ -195,6 +195,24 @@ class Ganalytics extends Module
                         ),
                     ),
                 ),
+                array(
+                    'type' => 'radio',
+                    'label' => $this->l('Anonymize IP'),
+                    'name' => 'GA_ANONYMIZE_ENABLED',
+                    'hint' => $this->l('Use this option to anonymize the visitor’s IP to comply with data privacy laws in some countries'),
+                    'values'    => array(
+                        array(
+                            'id' => 'ga_anonymize_enabled',
+                            'value' => 1,
+                            'label' => $this->l('Enabled')
+                        ),
+                        array(
+                            'id' => 'ga_anonymize_disabled',
+                            'value' => 0,
+                            'label' => $this->l('Disabled')
+                        ),
+                    ),
+                ),
             ),
             'submit' => array(
                 'title' => $this->l('Save'),
@@ -204,6 +222,7 @@ class Ganalytics extends Module
         // Load current value
         $helper->fields_value['GA_ACCOUNT_ID'] = Configuration::get('GA_ACCOUNT_ID');
         $helper->fields_value['GA_USERID_ENABLED'] = Configuration::get('GA_USERID_ENABLED');
+        $helper->fields_value['GA_ANONYMIZE_ENABLED'] = Configuration::get('GA_ANONYMIZE_ENABLED');
 
         return $helper->generateForm($fields_form);
     }
@@ -221,10 +240,17 @@ class Ganalytics extends Module
                 Configuration::updateValue('GANALYTICS_CONFIGURATION_OK', true);
                 $output .= $this->displayConfirmation($this->l('Account ID updated successfully'));
             }
+
             $ga_userid_enabled = Tools::getValue('GA_USERID_ENABLED');
             if (null !== $ga_userid_enabled) {
                 Configuration::updateValue('GA_USERID_ENABLED', (bool)$ga_userid_enabled);
                 $output .= $this->displayConfirmation($this->l('Settings for User ID updated successfully'));
+            }
+
+            $ga_anonymize_enabled = Tools::getValue('GA_ANONYMIZE_ENABLED');
+            if (null !== $ga_anonymize_enabled) {
+                Configuration::updateValue('GA_ANONYMIZE_ENABLED', (bool)$ga_anonymize_enabled);
+                $output .= $this->displayConfirmation($this->l('Settings for Anonymize IP updated successfully'));
             }
         }
 
@@ -254,11 +280,14 @@ class Ganalytics extends Module
             $user_id = (int)$this->context->customer->id;
         }
 
+        $ga_anonymize_enabled = Configuration::get('GA_ANONYMIZE_ENABLED');
+
         $this->smarty->assign(
             array(
                 'backOffice' => $back_office,
                 'userId' => $user_id,
                 'gaAccountId' => $this->_getGaAccountId(),
+                'gaAnonymizeEnabled' => $ga_anonymize_enabled,
             )
         );
         return $this->display(__FILE__, 'googleanalytics.tpl');

@@ -12,10 +12,14 @@
     {if isset($backOffice) && $backOffice}
     gtag('config', '{$gaAccountId|escape:'htmlall':'UTF-8'}', { 'send_page_view': false } );
     {else}
-    gtag('config', '{$gaAccountId|escape:'htmlall':'UTF-8'}');
+    let options = { };
     {if isset($userId)}
-    gtag('config', '{$gaAccountId|escape:'htmlall':'UTF-8'}', { 'user_id': '{$userId|escape:'htmlall':'UTF-8'}' } );
+    options['user_id'] = '{$userId|escape:'htmlall':'UTF-8'}';
     {/if}
+    {if $gaAnonymizeEnabled}
+    options['anonymize_ip'] = true;
+    {/if}
+    gtag('config', '{$gaAccountId|escape:'htmlall':'UTF-8'}', options );
     {/if}
 </script>
 
