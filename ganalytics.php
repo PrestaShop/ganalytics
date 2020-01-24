@@ -240,7 +240,7 @@ class Ganalytics extends Module
         return $this->display(__FILE__, 'views/templates/admin/configuration.tpl') . $output;
     }
 
-    protected function _getMeasurementId()
+    protected function _getGaAccountId()
     {
         return Tools::safeOutput(Configuration::get('GA_ACCOUNT_ID'));
     }
@@ -256,9 +256,9 @@ class Ganalytics extends Module
 
         $this->smarty->assign(
             array(
-                'back_office' => $back_office,
-                'user_id' => $user_id,
-                'ga_measurement_id' => $this->_getMeasurementId(),
+                'backOffice' => $back_office,
+                'userId' => $user_id,
+                'gaAccountId' => $this->_getGaAccountId(),
             )
         );
         return $this->display(__FILE__, 'googleanalytics.tpl');
@@ -596,7 +596,7 @@ class Ganalytics extends Module
 
             if (!empty($js_code)) {
                 if ($backoffice) {
-                    $js_code .= 'MBG.setCampaign(\'backoffice-orders\',\'backoffice\',\'cms\',\'' . $this->_getMeasurementId() . '\');';
+                    $js_code .= 'MBG.setCampaign(\'backoffice-orders\',\'backoffice\',\'cms\',\'' . $this->_getGaAccountId() . '\');';
                 }
 
                 $runjs_code .= '
@@ -605,7 +605,7 @@ class Ganalytics extends Module
                         var MBG = GoogleAnalyticEnhancedECommerce;
                         MBG.setCurrency(
                             \'' . Tools::safeOutput($this->context->currency->iso_code) . '\',
-                            \'' . $this->_getMeasurementId() . '\');
+                            \'' . $this->_getGaAccountId() . '\');
                         ' . $js_code . '
                     });
                 </script>';
