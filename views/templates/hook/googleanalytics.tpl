@@ -1,4 +1,4 @@
-<script async src='https://www.googletagmanager.com/gtag/js?id={$ga_measurement_id}'></script>
+<script async src='https://www.googletagmanager.com/gtag/js?id={$gaAccountId}'></script>
 <script type="text/javascript">
     {literal}
     window.dataLayer = window.dataLayer || [];
@@ -9,13 +9,17 @@
 
     gtag('js', new Date());
     {/literal}
-    {if isset($back_office) && $back_office == true}
-    gtag('config', '{$ga_measurement_id}', { 'send_page_view': false } );
+    {if isset($backOffice) && $backOffice}
+    gtag('config', '{$gaAccountId|escape:'htmlall':'UTF-8'}', { 'send_page_view': false } );
     {else}
-    gtag('config', '{$ga_measurement_id}');
+    let options = { };
+    {if isset($userId)}
+    options['user_id'] = '{$userId|escape:'htmlall':'UTF-8'}';
     {/if}
-    {if isset($user_id)}
-    gtag('config', '{$ga_measurement_id}', { 'user_id': '{$user_id}' } );
+    {if $gaAnonymizeEnabled}
+    options['anonymize_ip'] = true;
+    {/if}
+    gtag('config', '{$gaAccountId|escape:'htmlall':'UTF-8'}', options );
     {/if}
 </script>
 
