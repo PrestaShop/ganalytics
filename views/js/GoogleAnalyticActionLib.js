@@ -23,170 +23,136 @@
  *  International Registered Trademark & Property of PrestaShop SA
  **/
 
-/* globals $, ga, jQuery */
+/* globals $, gtag, jQuery */
 
-var GoogleAnalyticEnhancedECommerce = {
+const GoogleAnalyticEnhancedECommerce = {
 
-	setCurrency: function(Currency) {
-		ga('set', '&cu', Currency);
-	},
-	
-        setCampaign: function(Name,Source,Medium){
-            ga('set', 'campaignName', Name);
-            ga('set', 'campaignSource', Source);
-            ga('set', 'campaignMedium', Medium);
-        },
+    setCurrency: function (Currency, gaMeasurementId) {
+        gtag('config', gaMeasurementId, {'&cu': Currency});
+    },
 
-	add: function(Product, Order, Impression) {
-		var Products = {};
-		var Orders = {};
+    setCampaign: function (Name, Source, Medium, gaMeasurementId) {
+        gtag('config', gaMeasurementId, {'campaignName': Name});
+        gtag('config', gaMeasurementId, {'campaignSource': Source});
+        gtag('config', gaMeasurementId, {'campaignMedium': Medium});
+    },
 
-		var ProductFieldObject = ['id', 'name', 'category', 'brand', 'variant', 'price', 'quantity', 'coupon', 'list', 'position', 'dimension1'];
-		var OrderFieldObject = ['id', 'affiliation', 'revenue', 'tax', 'shipping', 'coupon', 'list', 'step', 'option'];
+    toProductItem: function (product, impression) {
+        const ProductFieldObject = ['id', 'name', 'brand', 'category', 'variant', 'price', 'quantity', 'coupon', 'list_name', 'list_position', 'price'];
+        let productItem = {};
+        if (product != null) {
+            if (impression && product.quantity !== undefined) {
+                delete product.quantity;
+            }
 
-		if (Product != null) {
-			if (Impression && Product.quantity !== undefined) {
-				delete Product.quantity;
-			}
+            for (const [key, value] of Object.entries(product)) {
+                for (let i = 0; i < ProductFieldObject.length; i++) {
+                    if (key.toLowerCase() == ProductFieldObject[i]) {
+                        if (value != null) {
+                            productItem[ProductFieldObject[i]] = value;
+                        }
+                    }
+                }
+            }
+        }
+        return productItem;
+    },
 
-			for (var productKey in Product) {
-				for (var i = 0; i < ProductFieldObject.length; i++) {
-					if (productKey.toLowerCase() == ProductFieldObject[i]) {
-						if (Product[productKey] != null) {
-							Products[productKey.toLowerCase()] = Product[productKey];
-						}
+    toOrderItem: function (order) {
+        const orderFieldObject = ['transaction_id', 'affiliation', 'value', 'tax', 'shipping', 'coupon', 'items', 'checkout_step', 'checkout_option'];
+        let orderItem = {};
 
-					}
-				}
+        if (order != null) {
+            for (const [key, value] of Object.entries(order)) {
+                for (let j = 0; j < orderFieldObject.length; j++) {
+                    if (key.toLowerCase() == orderFieldObject[j]) {
+                        orderItem[orderFieldObject[j]] = value;
+                    }
+                }
+            }
+        }
+        return orderItem;
+    },
 
-			}
-		}
+    viewItemList: function (products) {
+        let productItems = [];
+        for (let product of products)
+            productItems.push(this.toProductItem(product));
+        gtag('event', 'view_item_list', {'items': productItems});
+    },
 
-		if (Order != null) {
-			for (var orderKey in Order) {
-				for (var j = 0; j < OrderFieldObject.length; j++) {
-					if (orderKey.toLowerCase() == OrderFieldObject[j]) {
-						Orders[orderKey.toLowerCase()] = Order[orderKey];
-					}
-				}
-			}
-		}
+    addProductDetailView: function (product) {
+        let productItems = [this.toProductItem(product)];
+        gtag('event', 'view_item', {'items': productItems, 'non_interaction': true});
+    },
 
-		if (Impression) {
-			ga('ec:addImpression', Products);
-		} else {
-			ga('ec:addProduct', Products);
-		}
-	},
+    addToCart: function (product) {
+        let productItems = [this.toProductItem(product)];
+        gtag('event', 'add_to_cart', {'items': productItems});
+    },
 
-	addProductDetailView: function(Product) {
-		this.add(Product);
-		ga('ec:setAction', 'detail');
-		ga('send', 'event', 'UX', 'detail', 'Product Detail View',{'nonInteraction': 1});
-	},
+    removeFromCart: function (product) {
+        let productItems = [this.toProductItem(product)];
+        gtag('event', 'remove_from_cart', {'items': productItems});
+    },
 
-	addToCart: function(Product) {
-		this.add(Product);
-		ga('ec:setAction', 'add');
-		ga('send', 'event', 'UX', 'click', 'Add to Cart'); // Send data using an event.
-	},
+    refundByOrderId: function (orderId) {
+        gtag('event', 'refund', {"transaction_id": orderId, 'non_interaction': true})
+    },
 
-	removeFromCart: function(Product) {
-		this.add(Product);
-		ga('ec:setAction', 'remove');
-		ga('send', 'event', 'UX', 'click', 'Remove From cart'); // Send data using an event.
-	},
+    addProductClick: function (product) {
+        let clickPoint = $('a[href$="' + product.url + '"].quick-view');
+        clickPoint.on("click", function () {
+            const productItems = [GoogleAnalyticEnhancedECommerce.toProductItem(product)];
+            gtag('event', 'select_content', {
+                'items': productItems,
+                'event_callback': function () {
+                    return !gtag.loaded;
+                }
+            });
+        });
+    },
 
-	addProductImpression: function(Product) {
-		//ga('send', 'pageview');
-	},
+    addProductClickByHttpReferal: function (product) {
+        let productItems = [this.toProductItem(product)];
+        gtag('event', 'select_content', {
+            'items': productItems,
+            'event_callback': function () {
+                return !gtag.loaded;
+            },
+            'non_interaction': true
+        });
+    },
 
-	/**
-	id, type, affiliation, revenue, tax, shipping and coupon.
-	**/
-	refundByOrderId: function(Order) {
-		/**
-		 * Refund an entire transaction.
-		 **/
-		ga('ec:setAction', 'refund', {
-			'id': Order.id // Transaction ID is only required field for full refund.
-		});
-		ga('send', 'event', 'Ecommerce', 'Refund', {'nonInteraction': 1});
-	},
+    addTransaction: function (order,products) {
+        let purchase = this.toOrderItem(order);
+        purchase.event_callback = function () {
+            $.get(order.url, {
+                orderid: order.id,
+                customer: order.customer
+            })
+        };
+        gtag('event', 'purchase', purchase);
+    },
 
-	refundByProduct: function(Order) {
-		/**
-		 * Refund a single product.
-		 **/
-		//this.add(Product);
+    addCheckout: function (step, products) {
+        let productItems = [];
+        for (let product of products)
+            productItems.push(this.toProductItem(product));
 
-		ga('ec:setAction', 'refund', {
-			'id': Order.id, // Transaction ID is required for partial refund.
-		});
-		ga('send', 'event', 'Ecommerce', 'Refund', {'nonInteraction': 1});
-	},
+        if (step == 0) {
+            gtag('event', 'begin_checkout', {'items': productItems});
+        } else {
+            gtag('event', 'checkout_progress', {'items': productItems});
+        }
+    },
 
-	addProductClick: function(Product) {
-		var ClickPoint = jQuery('a[href$="' + Product.url + '"].quick-view');
+    addCheckoutOption: function (step, option, value) {
+        gtag('event', 'set_checkout_option', {
+            "checkout_step": step,
+            "checkout_option": option,
+            "value": value
+        });
 
-		ClickPoint.on("click", function() {
-			GoogleAnalyticEnhancedECommerce.add(Product);
-			ga('ec:setAction', 'click', {
-				list: Product.list
-			});
-
-			ga('send', 'event', 'Product Quick View', 'click', Product.list, {
-				'hitCallback': function() {
-					return !ga.loaded;
-				}
-			});
-		});
-
-	},
-
-	addProductClickByHttpReferal: function(Product) {
-		this.add(Product);
-		ga('ec:setAction', 'click', {
-			list: Product.list
-		});
-
-		ga('send', 'event', 'Product Click', 'click', Product.list, {
-			'nonInteraction': 1,
-			'hitCallback': function() {
-				return !ga.loaded;
-			}
-		});
-
-	},
-
-	addTransaction: function(Order) {
-
-		//this.add(Product);
-		ga('ec:setAction', 'purchase', Order);
-		ga('send', 'event','Transaction','purchase', {
-			'hitCallback': function() {
-				$.get(Order.url, {
-					orderid: Order.id,
-					customer: Order.customer
-				});
-			}
-		});
-
-	},
-
-	addCheckout: function(Step) {
-		ga('ec:setAction', 'checkout', {
-			'step': Step
-			//'option':'Visa'
-		});
-		ga('send', 'pageview');
-	},
-	
-	addCheckoutOption: function(Step,Option) {
-		ga('ec:setAction', 'checkout_option', {
-			'step': Step,
-			'option': Option
-		});
-		ga('send', 'event', 'Checkout', 'Option');
-  	}
+    }
 };
