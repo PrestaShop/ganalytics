@@ -1,5 +1,7 @@
 ![alt tag](views/img/ga_logo.png)
 
+**This module has been archived, it’s no longer maintained but you still can fork it if you need it for your shop.**
+
 ## About
 
 Gain clear insights into important metrics about your customers, using Google Analytics.
