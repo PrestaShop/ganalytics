@@ -657,11 +657,9 @@ class Ganalytics extends Module
 			
 				$runjs_code .= '
 				<script type="text/javascript">
-					jQuery(document).ready(function(){
-						var MBG = GoogleAnalyticEnhancedECommerce;
-						MBG.setCurrency(\''.Tools::safeOutput($this->context->currency->iso_code).'\');
-						'.$js_code.'
-					});
+					var MBG = GoogleAnalyticEnhancedECommerce;
+					MBG.setCurrency(\''.Tools::safeOutput($this->context->currency->iso_code).'\');
+					'.$js_code.'
 				</script>';
 			}
 
